@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Akreddit matris önerisi v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rubric_version": {
+      "const": "akreddit-relation-v1"
+    },
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "course_outcome_version_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "program_outcome_version_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "relation_status": {
+            "enum": [
+              "related",
+              "unrelated",
+              "insufficient_evidence"
+            ]
+          },
+          "score": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 5
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "document_version_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fragment_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "locator": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "document_version_id",
+                "fragment_id",
+                "locator"
+              ]
+            },
+            "minItems": 0
+          },
+          "review_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "review_status": {
+            "const": "unreviewed"
+          }
+        },
+        "required": [
+          "course_outcome_version_id",
+          "program_outcome_version_id",
+          "relation_status",
+          "score",
+          "rationale",
+          "sources",
+          "review_reasons",
+          "review_status"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "relation_status": {
+                  "const": "related"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "score": {
+                  "type": "integer"
+                },
+                "sources": {
+                  "minItems": 1
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "score": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "rubric_version",
+    "cells"
+  ]
+}

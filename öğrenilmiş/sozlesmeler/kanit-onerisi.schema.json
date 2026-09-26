@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Akreddit kanıt sınıflandırma önerisi v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_version_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "framework_version_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "criterion_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "enum": [
+              "supporting",
+              "contradictory",
+              "context_only"
+            ]
+          },
+          "claim": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "document_version_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fragment_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "locator": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "document_version_id",
+                "fragment_id",
+                "locator"
+              ]
+            },
+            "minItems": 1
+          },
+          "missing_information": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          },
+          "review_status": {
+            "const": "unreviewed"
+          }
+        },
+        "required": [
+          "criterion_id",
+          "role",
+          "claim",
+          "rationale",
+          "sources",
+          "missing_information",
+          "review_status"
+        ]
+      },
+      "minItems": 0
+    },
+    "no_match_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "evidence_version_id",
+    "framework_version_id",
+    "candidates",
+    "no_match_reason"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "candidates": {
+            "maxItems": 0
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "no_match_reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "no_match_reason": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

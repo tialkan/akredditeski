@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "id": "independent-demo-b",
+  "version": "0.1",
+  "publisher": "Sentetik kurum çalışma grubu",
+  "scope_type": "institution",
+  "status": "draft",
+  "is_official": false,
+  "is_synthetic": true,
+  "criteria": [
+    {
+      "id": "crit-participation-demo",
+      "display_code": "B-KATILIM",
+      "title": "Kararlara katılım",
+      "question": "Katılımcı geribildirimi hangi kararı etkiliyor?",
+      "evidence_expectations": [
+        "Geribildirim kaydı",
+        "Karar kaydı"
+      ]
+    }
+  ]
+}

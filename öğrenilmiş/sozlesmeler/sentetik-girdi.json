@@ -1,0 +1,39 @@
+{
+  "is_synthetic": true,
+  "tenant_id": "tenant-demo-a",
+  "program_id": "program-demo-1",
+  "framework_version_id": "akreddit-internal-demo@0.1",
+  "course_outcomes": [
+    {
+      "id": "co-demo-v1",
+      "statement": "Basit bir veri tabanında tablo ilişkilerini kurar."
+    }
+  ],
+  "program_outcomes": [
+    {
+      "id": "po-demo-v1",
+      "statement": "Veri yönetimi problemlerine uygun teknik çözümler uygular."
+    },
+    {
+      "id": "po-demo-language-v1",
+      "statement": "Mesleki metinleri ikinci bir dilde yorumlar."
+    },
+    {
+      "id": "po-demo-team-v1",
+      "statement": "Ortak bir görevde rol ve sorumluluk üstlenir."
+    }
+  ],
+  "documents": [
+    {
+      "id": "doc-demo-v1",
+      "is_synthetic": true,
+      "fragments": [
+        {
+          "id": "fragment-demo-1",
+          "locator": "paragraph:1",
+          "text": "Ders öğrenme çıktısı: Basit bir veri tabanında tablo ilişkilerini kurar. Laboratuvar uygulamasında öğrenciler tablo ilişkileri kurar. İzlencede bu uygulama için doğruluk ve veri bütünlüğü boyutlarını içeren bir rubrik tanımlıdır."
+        }
+      ]
+    }
+  ]
+}

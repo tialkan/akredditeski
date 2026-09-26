@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "id": "akreddit-internal-demo",
+  "version": "0.1",
+  "publisher": "Akreddit ürün tasarım ekibi",
+  "scope_type": "program",
+  "status": "draft",
+  "is_official": false,
+  "is_synthetic": true,
+  "criteria": [
+    {
+      "id": "crit-assessment-demo",
+      "display_code": "AK-OLCME",
+      "title": "Öğrenmenin değerlendirilmesi",
+      "question": "Öğrenme çıktıları hangi araç ve verilerle değerlendiriliyor?",
+      "evidence_expectations": [
+        "Onaylı ölçme planı",
+        "Çıktıyla ilişkili değerlendirme aracı",
+        "Dönem ve örneklemi belli sonuç analizi"
+      ]
+    },
+    {
+      "id": "crit-improvement-demo",
+      "display_code": "AK-IYILESTIRME",
+      "title": "İyileştirme etkisi",
+      "question": "Alınan kararın uygulaması ve etkisi nasıl doğrulanıyor?",
+      "evidence_expectations": [
+        "Kaynaklı bulgu",
+        "Sorumlusu belli karar",
+        "Uygulama kaydı",
+        "Yeniden ölçüm"
+      ]
+    }
+  ]
+}

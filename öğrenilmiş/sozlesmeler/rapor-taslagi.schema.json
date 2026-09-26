@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Akreddit rapor bölüm taslağı v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "criterion_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "framework_version_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "claim_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "document_version_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fragment_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "locator": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "document_version_id",
+                "fragment_id",
+                "locator"
+              ]
+            },
+            "minItems": 0
+          },
+          "calculation_run_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0
+          }
+        },
+        "required": [
+          "claim_id",
+          "text",
+          "sources",
+          "calculation_run_ids"
+        ],
+        "anyOf": [
+          {
+            "properties": {
+              "sources": {
+                "minItems": 1
+              }
+            }
+          },
+          {
+            "properties": {
+              "calculation_run_ids": {
+                "minItems": 1
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 0
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0
+    },
+    "review_status": {
+      "const": "unreviewed"
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_id",
+    "criterion_id",
+    "framework_version_id",
+    "claims",
+    "gaps",
+    "recommendations",
+    "review_status"
+  ]
+}

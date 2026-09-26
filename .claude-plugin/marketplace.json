@@ -1,0 +1,12 @@
+{
+  "name": "akreddit",
+  "description": "Akreddit eklentisi",
+  "owner": { "name": "Tarık İsmet ALKAN" },
+  "plugins": [
+    {
+      "name": "akreddit",
+      "source": "./eklenti",
+      "description": "Akreditasyon hazırlığı için adım adım, kaynaklı ve kayıtlı iş akışı."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-demo-classification",
+  "evidence_version_id": "doc-demo-v1",
+  "framework_version_id": "akreddit-internal-demo@0.1",
+  "candidates": [
+    {
+      "criterion_id": "crit-assessment-demo",
+      "role": "supporting",
+      "claim": "Laboratuvar çalışması için rubrik izlencede tanımlıdır.",
+      "rationale": "Pasaj ölçme aracının planlandığını gösterir; rubriğin uygulanmış olduğunu göstermez.",
+      "sources": [
+        {
+          "document_version_id": "doc-demo-v1",
+          "fragment_id": "fragment-demo-1",
+          "locator": "paragraph:1"
+        }
+      ],
+      "missing_information": [
+        "Uygulanmış rubrik örnekleri",
+        "Dönemli sonuç analizi"
+      ],
+      "review_status": "unreviewed"
+    }
+  ],
+  "no_match_reason": null
+}

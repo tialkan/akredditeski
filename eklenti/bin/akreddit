@@ -1,0 +1,257 @@
+#!/usr/bin/env node
+// Akreddit komut satırı aracı. Bağımlılık yok, Node 22.13+ ister (node:sqlite).
+// Claude Code eklentisi bu aracı çağırır; elle de kullanılabilir.
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, appendFileSync } from "node:fs";
+import { homedir, hostname } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
+import { DatabaseSync } from "node:sqlite";
+
+const SUNUCU = (process.env.AKREDDIT_SUNUCU || "https://tezatlas.com").replace(/\/$/, "");
+const AYAR_KLASORU = join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "akreddit");
+const KIMLIK = join(AYAR_KLASORU, "kimlik.json");
+
+const CIKIS = { tamam: 0, hata: 1, bagli_degil: 2, suresi_bitti: 3 };
+
+function yaz(metin) { process.stdout.write(`${metin}\n`); }
+function hata(metin, kod = CIKIS.hata) { process.stderr.write(`${metin}\n`); process.exit(kod); }
+
+function secenekler(argv) {
+  const s = { _: [] };
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i].startsWith("--")) {
+      const ad = argv[i].slice(2);
+      s[ad] = argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[++i] : true;
+    } else s._.push(argv[i]);
+  }
+  return s;
+}
+
+function kimlikOku() {
+  try { return JSON.parse(readFileSync(KIMLIK, "utf8")); } catch { return null; }
+}
+
+function kimlikYaz(veri) {
+  mkdirSync(AYAR_KLASORU, { recursive: true, mode: 0o700 });
+  writeFileSync(KIMLIK, JSON.stringify(veri, null, 2), { mode: 0o600 });
+  chmodSync(KIMLIK, 0o600);
+}
+
+async function istek(yol, secim = {}) {
+  const yanit = await fetch(`${SUNUCU}${yol}`, {
+    ...secim,
+    headers: { "Content-Type": "application/json", ...(secim.headers || {}) },
+    signal: AbortSignal.timeout(15000),
+  });
+  let govde = {};
+  try { govde = await yanit.json(); } catch { /* boş yanıt */ }
+  return { durum: yanit.status, govde };
+}
+
+const bekle = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function lisansSor() {
+  const k = kimlikOku();
+  if (!k?.jeton) return { kod: CIKIS.bagli_degil };
+  const { durum, govde } = await istek("/api/akreddit/lisans", { headers: { Authorization: `Bearer ${k.jeton}` } });
+  if (durum === 401) return { kod: CIKIS.bagli_degil, mesaj: govde.error };
+  if (durum !== 200) throw new Error(govde.error || `Sunucu ${durum} döndü.`);
+  return { kod: govde.aktif ? CIKIS.tamam : CIKIS.suresi_bitti, lisans: govde };
+}
+
+// ---------- Komutlar ----------
+
+async function baglan(s) {
+  const cihazAdi = String(s["cihaz-adi"] || `Claude Code · ${hostname()}`);
+  const { durum, govde } = await istek("/api/akreddit/cihaz", { method: "POST", body: JSON.stringify({ cihazAdi }) });
+  if (durum !== 200) hata(govde.error || "Bağlantı başlatılamadı.");
+  yaz("Tarayıcında şu adresi aç ve kodu onayla:");
+  yaz(`  ${govde.adres}`);
+  yaz(`  Kod: ${govde.kullaniciKodu}`);
+  yaz(`Onay bekleniyor (en fazla ${Math.round(govde.sureSaniye / 60)} dakika)…`);
+  const bitis = Date.now() + govde.sureSaniye * 1000;
+  while (Date.now() < bitis) {
+    await bekle(govde.aralikSaniye * 1000);
+    const y = await istek("/api/akreddit/cihaz/jeton", { method: "POST", body: JSON.stringify({ cihazKodu: govde.cihazKodu }) });
+    if (y.durum === 202) continue;
+    if (y.durum === 200 && y.govde.jeton) {
+      kimlikYaz({ sunucu: SUNUCU, jeton: y.govde.jeton, cihazAdi, baglanma: new Date().toISOString() });
+      yaz("Bağlandı.");
+      return durumGoster({});
+    }
+    hata(y.govde.error || "Kodun süresi doldu. Yeniden dene.");
+  }
+  hata("Süre doldu, onay gelmedi. Yeniden dene.");
+}
+
+async function durumGoster(s) {
+  let sonuc;
+  try {
+    sonuc = await lisansSor();
+  } catch (e) {
+    if (s.kanca) { yaz(`Akreddit: lisans sunucusuna ulaşılamadı (${e.message}). /akreddit komutu yeniden deneyecek.`); process.exit(0); }
+    hata(`Lisans sunucusuna ulaşılamadı: ${e.message}`);
+  }
+  if (s.json) { yaz(JSON.stringify({ kod: sonuc.kod, ...sonuc.lisans })); process.exit(sonuc.kod); }
+  const arac = "akreddit";
+  const mesajlar = {
+    [CIKIS.tamam]: () => `Akreddit: erişim açık, ${sonuc.lisans.kalanGun} gün kaldı (${sonuc.lisans.eposta}). Araç: ${arac}`,
+    [CIKIS.bagli_degil]: () => `Akreddit: bu bilgisayar bir hesaba bağlı değil. Bağlamak için: ${arac} baglan`,
+    [CIKIS.suresi_bitti]: () => `Akreddit: erişim süresi dolmuş (${sonuc.lisans.eposta}). Yeni oturum açılamaz. Yerel dosyalar duruyor. Uzatmak için: ${SUNUCU}/akreddit`,
+  };
+  yaz(mesajlar[sonuc.kod]());
+  process.exit(s.kanca ? 0 : sonuc.kod);
+}
+
+function cik() {
+  if (existsSync(KIMLIK)) rmSync(KIMLIK);
+  yaz("Bu bilgisayarın bağlantısı silindi. Siteden de iptal etmek için: " + `${SUNUCU}/akreddit/hesap`);
+}
+
+// ---------- Çalışma klasörü ----------
+
+const YEREL_SEMA = `
+  CREATE TABLE IF NOT EXISTS kanitlar (
+    id INTEGER PRIMARY KEY,
+    ozet TEXT NOT NULL UNIQUE CHECK (length(ozet) = 64),
+    ozgun_ad TEXT NOT NULL,
+    yol TEXT NOT NULL UNIQUE,
+    boyut INTEGER NOT NULL CHECK (boyut >= 0),
+    eklenme TEXT NOT NULL
+  ) STRICT;
+  CREATE TABLE IF NOT EXISTS adimlar (
+    id INTEGER PRIMARY KEY,
+    zaman TEXT NOT NULL,
+    eylem TEXT NOT NULL,
+    adres TEXT,
+    ayrinti TEXT,
+    ekran TEXT,
+    onaylayan TEXT
+  ) STRICT;
+  CREATE TRIGGER IF NOT EXISTS adim_degismez BEFORE UPDATE ON adimlar BEGIN SELECT RAISE(ABORT, 'Adım kaydı değiştirilemez.'); END;
+  CREATE TRIGGER IF NOT EXISTS adim_silinmez BEFORE DELETE ON adimlar BEGIN SELECT RAISE(ABORT, 'Adım kaydı silinemez.'); END;
+`;
+
+function klasorBul(baslangic = process.cwd()) {
+  let k = resolve(baslangic);
+  while (true) {
+    if (existsSync(join(k, "AKREDDIT.md")) && existsSync(join(k, "kayit"))) return k;
+    const ust = dirname(k);
+    if (ust === k) return null;
+    k = ust;
+  }
+}
+
+function yerelVt(klasor) {
+  const vt = new DatabaseSync(join(klasor, "kayit", "akreddit.sqlite"));
+  vt.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;");
+  vt.exec(YEREL_SEMA);
+  return vt;
+}
+
+function adimKaydet(klasor, a) {
+  const kayit = { zaman: new Date().toISOString(), eylem: a.eylem, adres: a.adres ?? null, ayrinti: a.ayrinti ?? null, ekran: a.ekran ?? null, onaylayan: a.onaylayan ?? null };
+  const vt = yerelVt(klasor);
+  vt.prepare("INSERT INTO adimlar (zaman, eylem, adres, ayrinti, ekran, onaylayan) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(kayit.zaman, kayit.eylem, kayit.adres, kayit.ayrinti, kayit.ekran, kayit.onaylayan);
+  vt.close();
+  appendFileSync(join(klasor, "gunluk", `${kayit.zaman.slice(0, 10)}.jsonl`), `${JSON.stringify(kayit)}\n`);
+}
+
+const KLASOR_BENIOKU = `# Akreddit çalışma klasörü
+
+Bu klasör bir programın akreditasyon hazırlığını tutar. Claude Code'u bu klasörde açıp \`/akreddit\` yaz.
+
+- \`kanitlar/\`: özgün dosyalar. Adı içeriğin SHA-256 özetiyle başlar, üzerine yazılmaz.
+- \`kayit/akreddit.sqlite\`: kanıt listesi ve adım günlüğü.
+- \`gunluk/\`: her günün adımları (JSONL) ve ekran görüntüleri.
+- \`raporlar/\`: kaynaklı taslaklar.
+- \`tarayici/\`: tarayıcı profili. Git'e girmez, iş bitince silinebilir.
+
+Kurallar: kanıtı olmayan iddia yazılmaz. Kurum sistemlerine parolayı sen girersin.
+Dış kuruma giden son gönderim her zaman sende.
+`;
+
+async function lisansZorunlu() {
+  const s = await lisansSor().catch((e) => hata(`Lisans sunucusuna ulaşılamadı: ${e.message}`));
+  if (s.kod === CIKIS.bagli_degil) hata("Önce hesaba bağlan: akreddit baglan", CIKIS.bagli_degil);
+  if (s.kod === CIKIS.suresi_bitti) hata(`Erişim süren dolmuş. Uzatmak için: ${SUNUCU}/akreddit`, CIKIS.suresi_bitti);
+  return s.lisans;
+}
+
+async function kur(s) {
+  await lisansZorunlu();
+  const klasor = resolve(s._[0] || ".");
+  for (const alt of ["kanitlar", "kayit", "gunluk", "raporlar", "tarayici"]) mkdirSync(join(klasor, alt), { recursive: true });
+  if (!existsSync(join(klasor, "AKREDDIT.md"))) writeFileSync(join(klasor, "AKREDDIT.md"), KLASOR_BENIOKU);
+  const gi = join(klasor, ".gitignore");
+  if (!existsSync(gi)) writeFileSync(gi, "tarayici/\nkayit/*.sqlite-wal\nkayit/*.sqlite-shm\n.DS_Store\n");
+  yerelVt(klasor).close();
+  if (!existsSync(join(klasor, ".git"))) {
+    try { execFileSync("git", ["init", "-q"], { cwd: klasor }); } catch { yaz("Uyarı: git bulunamadı, sürüm geçmişi tutulmayacak."); }
+  }
+  adimKaydet(klasor, { eylem: "klasor_kuruldu" });
+  yaz(`Çalışma klasörü hazır: ${klasor}`);
+}
+
+function kanitEkle(s) {
+  const klasor = klasorBul();
+  if (!klasor) hata("Bir Akreddit çalışma klasöründe değilsin. Önce: kur <klasor>");
+  if (s._.length === 0) hata("Eklenecek dosyayı yaz: kanit-ekle <dosya> [dosya…]");
+  const vt = yerelVt(klasor);
+  for (const dosya of s._) {
+    if (!existsSync(dosya) || !statSync(dosya).isFile()) { yaz(`Atlandı (dosya yok): ${dosya}`); continue; }
+    const icerik = readFileSync(dosya);
+    const ozet = createHash("sha256").update(icerik).digest("hex");
+    const var_ = vt.prepare("SELECT yol FROM kanitlar WHERE ozet = ?").get(ozet);
+    if (var_) { yaz(`Zaten var: ${basename(dosya)} → ${var_.yol}`); continue; }
+    const temizAd = basename(dosya).replace(/[^\p{L}\p{N}._-]+/gu, "_").slice(-120);
+    const yol = join("kanitlar", `${ozet.slice(0, 16)}-${temizAd}`);
+    copyFileSync(dosya, join(klasor, yol));
+    chmodSync(join(klasor, yol), 0o444);
+    vt.prepare("INSERT INTO kanitlar (ozet, ozgun_ad, yol, boyut, eklenme) VALUES (?, ?, ?, ?, ?)")
+      .run(ozet, basename(dosya), yol, icerik.length, new Date().toISOString());
+    yaz(`Eklendi: ${basename(dosya)} → ${yol}`);
+  }
+  vt.close();
+  adimKaydet(klasor, { eylem: "kanit_eklendi", ayrinti: JSON.stringify({ dosyalar: s._.map((d) => basename(d)) }) });
+}
+
+function adim(s) {
+  const klasor = klasorBul();
+  if (!klasor) hata("Bir Akreddit çalışma klasöründe değilsin.");
+  if (!s._[0]) hata("Eylem adını yaz: adim <eylem> [--adres …] [--ayrinti …] [--ekran …] [--onaylayan …]");
+  adimKaydet(klasor, { eylem: s._[0], adres: s.adres, ayrinti: s.ayrinti, ekran: s.ekran, onaylayan: s.onaylayan });
+  yaz("Kaydedildi.");
+}
+
+function ozetGoster() {
+  const klasor = klasorBul();
+  if (!klasor) hata("Bir Akreddit çalışma klasöründe değilsin.");
+  const vt = yerelVt(klasor);
+  const kanit = vt.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(boyut), 0) AS b FROM kanitlar").get();
+  const son = vt.prepare("SELECT zaman, eylem, adres, ayrinti FROM adimlar ORDER BY id DESC LIMIT 15").all();
+  vt.close();
+  yaz(`Klasör: ${klasor}`);
+  yaz(`Kanıt: ${kanit.n} dosya, ${(kanit.b / 1048576).toFixed(1)} MB`);
+  yaz("Son adımlar (yeniden eskiye):");
+  for (const a of son) yaz(`  ${a.zaman.slice(0, 16).replace("T", " ")}  ${a.eylem}${a.adres ? `  ${a.adres}` : ""}${a.ayrinti ? `  ${a.ayrinti}` : ""}`);
+}
+
+const YARDIM = `Akreddit
+
+  baglan [--cihaz-adi ad]   Bu bilgisayarı tezatlas.com hesabına bağlar
+  durum [--json]            Erişim durumunu gösterir (çıkış: 0 açık, 2 bağlı değil, 3 süre doldu)
+  cik                       Bu bilgisayarın bağlantısını siler
+  kur [klasor]              Çalışma klasörü oluşturur
+  kanit-ekle <dosya…>       Dosyaları kanıt olarak ekler (özgünü korunur)
+  adim <eylem> [--adres u] [--ayrinti json] [--ekran yol] [--onaylayan kisi]
+                            Adım günlüğüne kayıt ekler
+  ozet                      Klasörün durumunu ve son adımları gösterir`;
+
+const [komut, ...geri] = process.argv.slice(2);
+const s = secenekler(geri);
+const KOMUTLAR = { baglan, durum: durumGoster, cik, kur, "kanit-ekle": kanitEkle, adim, ozet: ozetGoster };
+if (!KOMUTLAR[komut]) { yaz(YARDIM); process.exit(komut ? CIKIS.hata : 0); }
+await KOMUTLAR[komut](s);

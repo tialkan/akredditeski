@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-demo-matrix",
+  "rubric_version": "akreddit-relation-v1",
+  "cells": [
+    {
+      "course_outcome_version_id": "co-demo-v1",
+      "program_outcome_version_id": "po-demo-v1",
+      "relation_status": "related",
+      "score": 3,
+      "rationale": "Tablo ilişkileri uygulaması veri yönetimi çıktısının bir bileşenini çalıştırır ve rubrikle değerlendirilmek üzere planlanmıştır. Gerçek başarım verisi yoktur.",
+      "sources": [
+        {
+          "document_version_id": "doc-demo-v1",
+          "fragment_id": "fragment-demo-1",
+          "locator": "paragraph:1"
+        }
+      ],
+      "review_reasons": [],
+      "review_status": "unreviewed"
+    },
+    {
+      "course_outcome_version_id": "co-demo-v1",
+      "program_outcome_version_id": "po-demo-language-v1",
+      "relation_status": "unrelated",
+      "score": null,
+      "rationale": "Verilen ders çıktısı ve uygulama tanımında ikinci dilde mesleki metin yorumlamayla desteklenmiş ilişki yok.",
+      "sources": [
+        {
+          "document_version_id": "doc-demo-v1",
+          "fragment_id": "fragment-demo-1",
+          "locator": "paragraph:1"
+        }
+      ],
+      "review_reasons": [],
+      "review_status": "unreviewed"
+    },
+    {
+      "course_outcome_version_id": "co-demo-v1",
+      "program_outcome_version_id": "po-demo-team-v1",
+      "relation_status": "insufficient_evidence",
+      "score": null,
+      "rationale": "Uygulamanın bireysel veya ekip çalışması biçimi ve rol değerlendirmesi belirtilmemiş.",
+      "sources": [
+        {
+          "document_version_id": "doc-demo-v1",
+          "fragment_id": "fragment-demo-1",
+          "locator": "paragraph:1"
+        }
+      ],
+      "review_reasons": [
+        "Ekip çalışma planı gerekli."
+      ],
+      "review_status": "unreviewed"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run-demo-report",
+  "criterion_id": "crit-assessment-demo",
+  "framework_version_id": "akreddit-internal-demo@0.1",
+  "claims": [
+    {
+      "claim_id": "claim-demo-1",
+      "text": "Ders izlencesinde tablo ilişkileri uygulamasını değerlendirmek için doğruluk ve veri bütünlüğü boyutlarını içeren bir rubrik tanımlanmıştır.",
+      "sources": [
+        {
+          "document_version_id": "doc-demo-v1",
+          "fragment_id": "fragment-demo-1",
+          "locator": "paragraph:1"
+        }
+      ],
+      "calculation_run_ids": []
+    }
+  ],
+  "gaps": [
+    "Rubriğin hangi dönemde uygulandığını ve öğrencilerin başarımını gösteren onaylı kayıt bulunmuyor."
+  ],
+  "recommendations": [
+    "Uygulanmış rubrikler ile dönem ve kapsamı belli analiz tablosu ekleyin."
+  ],
+  "review_status": "unreviewed"
+}
