@@ -201,6 +201,16 @@ const YEREL_GOCLER = [
   BEGIN SELECT RAISE(ABORT, 'Yazma planı bu şekilde değiştirilemez. Yeni plan aç.'); END;
   CREATE TRIGGER plan_silinmez BEFORE DELETE ON yazma_planlari BEGIN SELECT RAISE(ABORT, 'Yazma planı silinemez.'); END;
   `,
+  `
+  CREATE TABLE bologna_aktarimlari (
+    id INTEGER PRIMARY KEY,
+    zaman TEXT NOT NULL,
+    adres TEXT NOT NULL,
+    kanit_id INTEGER NOT NULL REFERENCES kanitlar(id),
+    ders_sayisi INTEGER NOT NULL
+  ) STRICT;
+  CREATE TRIGGER aktarim_degismez BEFORE UPDATE ON bologna_aktarimlari BEGIN SELECT RAISE(ABORT, 'Aktarım kaydı değiştirilemez.'); END;
+  `,
 ];
 
 function klasorBul(baslangic = process.cwd()) {
@@ -679,6 +689,113 @@ function pilotRaporu(s) {
   yaz(metin);
 }
 
+// ---------- Bologna Bilgi Paketi ----------
+
+async function bolognaModulu() {
+  return import(new URL("../lib/bologna.mjs", import.meta.url).href);
+}
+
+/** Bir dosyayı kanıt olarak kaydeder, var olanı tekrar eklemez. Kanıt kimliğini döner. */
+function kanitKaydet(klasor, vt, ad, icerik) {
+  const ozet = createHash("sha256").update(icerik).digest("hex");
+  const var_ = vt.prepare("SELECT id FROM kanitlar WHERE ozet = ?").get(ozet);
+  if (var_) return { id: var_.id, ozet };
+  const yol = join("kanitlar", `${ozet.slice(0, 16)}-${ad}`);
+  writeFileSync(join(klasor, yol), icerik);
+  chmodSync(join(klasor, yol), 0o444);
+  const r = vt.prepare("INSERT INTO kanitlar (ozet, ozgun_ad, yol, boyut, eklenme) VALUES (?, ?, ?, ?, ?)")
+    .run(ozet, ad, yol, Buffer.byteLength(icerik), new Date().toISOString());
+  return { id: Number(r.lastInsertRowid), ozet };
+}
+
+async function bolognaAl(s) {
+  const { klasor, vt } = klasorVeVt();
+  vt.close();
+  const adres = s._[0];
+  if (!adres) hata("Programın Bologna adresini ver: akreddit bologna-al \"https://…/bologna/index.aspx?…curSunit=…\"");
+  const { programiOku } = await bolognaModulu();
+  const dersler = s.dersler ? String(s.dersler).split(",").map((x) => x.trim().toUpperCase()).filter(Boolean) : null;
+  let veri;
+  try {
+    veri = await programiOku(adres, { dersler, ilerleme: (m) => process.stderr.write(`${m}\n`) });
+  } catch (e) {
+    hata(`Bologna okunamadı: ${e.message}`);
+  }
+  const db = yerelVt(klasor);
+  const tarih = veri.okundu.slice(0, 10);
+  const kanit = kanitKaydet(klasor, db, `bologna-${tarih}.json`, JSON.stringify(veri, null, 2));
+  db.prepare("INSERT INTO bologna_aktarimlari (zaman, adres, kanit_id, ders_sayisi) VALUES (?, ?, ?, ?)").run(veri.okundu, adres, kanit.id, veri.dersler.length);
+
+  // Çıktıları çalışma klasörüne aktar. Aynı kodla farklı metin varsa dokunma, bildir.
+  const cakisan = [];
+  const ekle = db.prepare("INSERT OR IGNORE INTO ciktilar (tur, ders, kod, metin, kanit_id, eklenme) VALUES (?, ?, ?, ?, ?, ?)");
+  const mevcut = db.prepare("SELECT metin FROM ciktilar WHERE tur = ? AND ders = ? AND kod = ?");
+  const aktar = (tur, ders, c) => {
+    const m = mevcut.get(tur, ders, c.kod);
+    if (m && m.metin !== c.metin) return cakisan.push(`${ders ? `${ders}.` : ""}${c.kod}`);
+    if (c.metin.length >= 5) ekle.run(tur, ders, c.kod, c.metin, kanit.id, veri.okundu);
+  };
+  veri.programCiktilari.forEach((c) => aktar("program", "", c));
+  for (const d of veri.dersler) (d.ciktilar || []).forEach((c) => aktar("ders", d.kod, c));
+  db.close();
+  adimKaydet(klasor, { eylem: "bologna_alindi", adres, ayrinti: JSON.stringify({ kanit: kanit.ozet.slice(0, 8), ders: veri.dersler.length }) });
+  yaz(`Okundu: ${veri.programCiktilari.length} program çıktısı, ${veri.matris.dersler.length} matris satırı, ${veri.dersler.length} ders sayfası.`);
+  yaz(`Kanıt olarak saklandı: K:${kanit.ozet.slice(0, 8)} (bologna-${tarih}.json)`);
+  if (cakisan.length) yaz(`Metni değişmiş çıktılar (aktarılmadı, kontrol et): ${cakisan.join(", ")}`);
+  yaz("Denetim için: akreddit bologna-denetle");
+}
+
+const KURAL_ADLARI = {
+  "program-ciktisi": "Program çıktıları",
+  "bos-sayfa": "Boş ders bilgi sayfası",
+  tyyc: "TYYÇ matrisi",
+  "matris-bos": "Boş matris satırı",
+  "matris-ayrimsiz": "Ayrım yapılmamış matris satırı",
+  "matris-tutarlilik": "Ders sayfası ile program matrisi uyuşmazlığı",
+  "katki-destegi": "Ders çıktılarıyla desteklenmeyen genel katkı",
+  "akts-isyuku": "AKTS ve iş yükü uyumu",
+  degerlendirme: "Değerlendirme ağırlıkları",
+  "ders-yapisi": "Ders yapısı yüzdeleri",
+  kredi: "Ulusal kredi",
+  "ders-ciktisi": "Ders öğrenme çıktıları",
+  haftalar: "Haftalık konular",
+  guncellik: "Güncellik",
+  okuma: "Okunamayan sayfalar",
+};
+
+async function bolognaDenetle(s) {
+  const { klasor, vt } = klasorVeVt();
+  const son = vt.prepare("SELECT b.*, k.ozet, k.yol FROM bologna_aktarimlari b JOIN kanitlar k ON k.id = b.kanit_id ORDER BY b.id DESC LIMIT 1").get();
+  vt.close();
+  if (!son) hata("Önce Bologna verisini al: akreddit bologna-al <adres>");
+  const veri = JSON.parse(readFileSync(join(klasor, son.yol), "utf8"));
+  const { denetle } = await bolognaModulu();
+  const [alt, ust] = String(s["akts-saat"] || "25-30").split("-").map(Number);
+  const bulgular = denetle(veri, { aktsSaat: [alt, ust] });
+  const kaynak = `[K:${son.ozet.slice(0, 8)}]`;
+  const hataSayisi = bulgular.filter((b) => b.duzey === "hata").length;
+  const satirlar = [
+    "# Bologna Bilgi Paketi denetimi",
+    "",
+    `Kaynak: ${son.adres} (okunma ${son.zaman.slice(0, 16).replace("T", " ")}) ${kaynak}`,
+    "",
+    `${veri.dersler.length} ders sayfası incelendi. ${hataSayisi} hata, ${bulgular.length - hataSayisi} uyarı.`,
+    "",
+    "Bu kurallar resmî ölçüt değildir. Tutarsızlığı işaretler, düzeltme kararını komisyon verir. AKTS başına beklenen saat aralığı: " + `${alt}-${ust}.`,
+  ];
+  for (const [kural, ad] of Object.entries(KURAL_ADLARI)) {
+    const grup = bulgular.filter((b) => b.kural === kural);
+    if (!grup.length) continue;
+    satirlar.push("", `## ${ad} (${grup.length})`, "");
+    for (const b of grup) satirlar.push(`- **${b.duzey === "hata" ? "Hata" : "Uyarı"}** ${b.ders === "-" ? "" : `${b.ders}: `}${b.aciklama} ${kaynak}`);
+  }
+  if (!bulgular.length) satirlar.push("", "Denetimde bulgu çıkmadı.");
+  const metin = satirlar.join("\n");
+  writeFileSync(join(klasor, "raporlar", "bologna-denetim.md"), `${metin}\n`);
+  adimKaydet(klasor, { eylem: "bologna_denetlendi", ayrinti: JSON.stringify({ hata: hataSayisi, uyari: bulgular.length - hataSayisi }) });
+  yaz(metin);
+}
+
 const YARDIM = `Akreddit
 
   baglan [--cihaz-adi ad]   Bu bilgisayarı tezatlas.com hesabına bağlar
@@ -703,7 +820,9 @@ const YARDIM = `Akreddit
   yazma-onay <id> --onaylayan "Ad Soyad"   Planı 20 dakikalığına açar
   yazma-bitir <id> tamamlandi|iptal --sonuc "…"
   yazma-planlari            Son yazma planları
-  pilot-raporu [--eski-saat N]  Süre, karar oranları ve kapsamı raporlar/pilot-raporu.md'ye yazar`;
+  pilot-raporu [--eski-saat N]  Süre, karar oranları ve kapsamı raporlar/pilot-raporu.md'ye yazar
+  bologna-al <adres> [--dersler A,B]  Programın herkese açık Bologna verisini kanıt olarak alır
+  bologna-denetle [--akts-saat 25-30]  AKTS, değerlendirme, matris tutarlılığı ve diğer kuralları denetler`;
 
 const [komut, ...geri] = process.argv.slice(2);
 const s = secenekler(geri);
@@ -714,6 +833,7 @@ const KOMUTLAR = {
   karar, matris: matrisOlustur, "rapor-denetle": raporDenetle,
   "yazma-plani": yazmaPlani, "yazma-onay": yazmaOnay, "yazma-bitir": yazmaBitir, "yazma-planlari": yazmaPlanlari,
   "pilot-raporu": pilotRaporu,
+  "bologna-al": bolognaAl, "bologna-denetle": bolognaDenetle,
 };
 if (!KOMUTLAR[komut]) { yaz(YARDIM); process.exit(komut ? CIKIS.hata : 0); }
 await KOMUTLAR[komut](s);

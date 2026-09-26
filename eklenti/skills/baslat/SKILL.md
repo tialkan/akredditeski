@@ -41,6 +41,7 @@ Soruları **tek tek** sor, her cevabı kaydet (`akreddit adim baslangic --ayrint
 Cevaplara göre kısa bir plan yaz (`raporlar/plan.md`), kaydet, kullanıcıya üç maddeyle özetle. Sonra işe göre ilgili skill'i kullan:
 
 - Belge eklemek ve incelemek: `kanit-inceleme`
+- Bologna paketini almak ve denetlemek: `bologna` (çoğu zaman en iyi başlangıç)
 - Çıktılar ve matris: `matris`
 - Rapor bölümü yazmak: `rapor`
 - Bologna, AVESİS gibi sistemlerden bilgi almak: `sistemden-oku`

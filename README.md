@@ -35,7 +35,7 @@ Kaynak kod bu özel depoda kalır. Sitede yalnız paketlenmiş eklenti yayımlan
 ## Test
 
 ```bash
-node --test eklenti/test/akreddit.test.mjs
+node --test eklenti/test/*.test.mjs
 claude plugin validate ./ && claude plugin validate ./eklenti
 ```
 
