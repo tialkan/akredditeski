@@ -44,6 +44,7 @@ Cevaplara göre kısa bir plan yaz (`raporlar/plan.md`), kaydet, kullanıcıya �
 - Çıktılar ve matris: `matris`
 - Rapor bölümü yazmak: `rapor`
 - Bologna, AVESİS gibi sistemlerden bilgi almak: `sistemden-oku`
+- Bu sistemlerde alanları güncellemek: `sisteme-yaz`
 
 Kullanıcı ne yapacağını bilmiyorsa sen öner: "İstersen elindeki izlenceleri ve tutanakları bu pencereye sürükle, birlikte inceleyelim."
 

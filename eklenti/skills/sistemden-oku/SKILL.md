@@ -1,11 +1,11 @@
 ---
 name: sistemden-oku
-description: Akreddit'te Bologna, AVESİS, OBS, EBYS gibi kurum sistemlerinden tarayıcıyla bilgi okumak için kullan. Bu sürümde yalnız okuma yapılır.
+description: Akreddit'te Bologna, AVESİS, OBS, EBYS gibi kurum sistemlerinden tarayıcıyla bilgi okumak için kullan.
 ---
 
 # Kurum sistemlerinden okuma
 
-Bu sürümde **yalnız okursun.** Alan doldurma araçları kapalıdır, denersen engellenir.
+Bu skill yalnız okur. Bir alanı doldurmak gerekirse `sisteme-yaz` skill'ine geç.
 
 1. Kullanıcıya hangi sayfadan ne alacağınızı söyle (örnek: "Bologna'dan TBP201'in öğrenme çıktılarını alacağız").
 2. Tarayıcı aracıyla sayfayı aç. Giriş gerekiyorsa şunu söyle ve bekle: "Açılan tarayıcı penceresinde kullanıcı adını ve parolanı kendin yaz, giriş yapınca bana 'tamam' de." Parolayı asla sorma, sohbete yazdırma.
@@ -15,4 +15,4 @@ Bu sürümde **yalnız okursun.** Alan doldurma araçları kapalıdır, denersen
 6. Kullanıcı onaylarsa bilgiyi ilgili yere işle: çıktılar için `akreddit cikti-ekle`, belgeler için indirip `akreddit kanit-ekle`.
 7. İş bitince tarayıcıyı kapat. Oturum bilgisi saklanmaz, bir sonraki sefer yeniden giriş gerekir.
 
-Kullanıcı bir sisteme bilgi girilmesini isterse, girilecek değerleri **alan / şu anki değer / yeni değer / kaynak** tablosuyla hazırla. Kendisinin girmesini iste. Otomatik doldurma bir sonraki sürümde, sayfa sayfa onayla gelecek.
+Kullanıcı bir sisteme bilgi girilmesini isterse `sisteme-yaz` skill'ini kullan.

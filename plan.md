@@ -268,7 +268,8 @@ Faz 1 ve 2 tezatlas deposunda, faz 3 ve sonrası akreddit deposunda yapılır.
 - **Faz 4 bitti.** Program ve ders çıktıları, kanıt etiketi ve matris önerileri, insan adıyla karar (onay, düzeltme, ret), matris tablosu (md ve csv), rapor denetimi (her [K:kod] gerçek kanıta çıkmalı, kaynaksız sayı uyarı alır). Tarayıcı (Playwright MCP, bellekte profil) yalnız okuma: izin listesi dışındaki araçlar kancayla engellenir. Skill'ler: kanit-inceleme, matris, rapor, sistemden-oku.
 - **Dağıtım:** eklenti tezatlas.com/akreddit/marketplace.json ve SHA-256 sabitli zip ile yayında. Canlı siteden kurulum denendi, çalıştı. Kaynak kod özel GitHub deposunda (tialkan/akreddit).
 - **Kullanıcı rehberi:** tezatlas.com/akreddit/kurulum.
-- **Sıradaki: Faz 5.** Tarayıcıda onaylı yazma: alan tablosu, sayfa sayfa onay, son gönderim insanda.
+- **Faz 5 bitti (eklenti 0.3.0).** Yazma planı: sayfa başına alan / mevcut / yeni / kaynak tablosu, kaynaksız değer ve giriş bilgisi alanı reddedilir, onay kişi adıyla kaydedilir, plan 20 dakika geçerli, aynı anda tek plan. Koruma kancası: plan dışı değer, parola alanı, Enter ile gönderme, "Gönder/Onayla/Sun" düğmeleri ve izin sormayan modlar reddedilir. Plandaki her yazma ve "Kaydet" tıklaması için Claude Code kullanıcıya ayrıca sorar. Bu soru yapay zekânın atlayamayacağı asıl güvencedir, çünkü yerel dosyalardaki onay kaydını model de yazabilir. Her yazma isteği günlüğe düşer.
+- **Sıradaki: Faz 6, pilot.** Kendi kurumunda %50 indirimli bir ya da iki program. Önce bir hocayla kurulum, sonra gerçek bir sayfada okuma ve yazma. Süre ve düzeltme oranı ölçülür.
 - **Faz 6 (pilot) öncesi mutlaka:** gerçek bir hocayla baştan sona kurulum ve bir oturum. Takıldığı her yeri not et, rehberi ve skill metnini ona göre düzelt.
 
 ### Yayına almadan önce senin yapman gerekenler

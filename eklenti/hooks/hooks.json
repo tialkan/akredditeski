@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/salt-okuma.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/koruma.mjs\""
           }
         ]
       }

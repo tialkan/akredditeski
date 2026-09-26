@@ -180,6 +180,27 @@ const YEREL_GOCLER = [
   CREATE TRIGGER oneri_silinmez BEFORE DELETE ON oneriler BEGIN SELECT RAISE(ABORT, 'Öneri silinemez.'); END;
   CREATE TRIGGER kanit_silinmez BEFORE DELETE ON kanitlar BEGIN SELECT RAISE(ABORT, 'Kanıt kaydı silinemez.'); END;
   `,
+  `
+  CREATE TABLE yazma_planlari (
+    id INTEGER PRIMARY KEY,
+    sistem TEXT NOT NULL,
+    adres TEXT NOT NULL,
+    alanlar TEXT NOT NULL CHECK (json_valid(alanlar) AND json_array_length(alanlar) BETWEEN 1 AND 60),
+    durum TEXT NOT NULL DEFAULT 'bekliyor' CHECK (durum IN ('bekliyor', 'onaylandi', 'tamamlandi', 'iptal')),
+    onaylayan TEXT,
+    onay_zamani TEXT,
+    son_kullanma TEXT,
+    sonuc TEXT,
+    olusturma TEXT NOT NULL,
+    CHECK (durum = 'bekliyor' OR durum = 'iptal' OR (onaylayan IS NOT NULL AND onay_zamani IS NOT NULL))
+  ) STRICT;
+  CREATE TRIGGER plan_gecisi BEFORE UPDATE ON yazma_planlari
+  WHEN NOT ((OLD.durum = 'bekliyor' AND NEW.durum IN ('onaylandi', 'iptal'))
+         OR (OLD.durum = 'onaylandi' AND NEW.durum IN ('tamamlandi', 'iptal')))
+    OR NEW.alanlar <> OLD.alanlar OR NEW.adres <> OLD.adres
+  BEGIN SELECT RAISE(ABORT, 'Yazma planı bu şekilde değiştirilemez. Yeni plan aç.'); END;
+  CREATE TRIGGER plan_silinmez BEFORE DELETE ON yazma_planlari BEGIN SELECT RAISE(ABORT, 'Yazma planı silinemez.'); END;
+  `,
 ];
 
 function klasorBul(baslangic = process.cwd()) {
@@ -509,6 +530,79 @@ function raporDenetle(s) {
   yaz(hatalar.length + uyarilar.length ? "" : "Denetim temiz.");
 }
 
+// ---------- Faz 5: onaylı yazma planları ----------
+
+const PLAN_OMRU_DK = 20;
+
+function planTablosu(p) {
+  const alanlar = JSON.parse(p.alanlar);
+  const satirlar = [
+    `Yazma planı #${p.id} [${p.durum}] · ${p.sistem} · ${p.adres}`,
+    "",
+    "| Alan | Şu anki değer | Yeni değer | Kaynak |",
+    "|---|---|---|---|",
+    ...alanlar.map((a) => `| ${a.alan} | ${a.mevcut || "(boş)"} | ${a.yeni} | ${a.kaynak} |`),
+  ];
+  return satirlar.join("\n");
+}
+
+function yazmaPlani(s) {
+  const { klasor, vt } = klasorVeVt();
+  if (!s.sistem || !s.adres || !s.alanlar) hata("--sistem, --adres ve --alanlar '<json>' gerekli.");
+  let alanlar;
+  try { alanlar = JSON.parse(String(s.alanlar)); } catch { hata("--alanlar geçerli bir JSON dizisi olmalı."); }
+  if (!Array.isArray(alanlar) || !alanlar.length) hata("En az bir alan ver.");
+  for (const a of alanlar) {
+    if (!a.alan || typeof a.yeni !== "string" || !a.kaynak) hata("Her alanda alan, yeni ve kaynak olmalı. Kaynağı olmayan değer yazılmaz.");
+    if (/parola|şifre|sifre|password|pin|doğrulama kodu/i.test(a.alan)) hata(`"${a.alan}" bir giriş bilgisi alanı. Bunu yalnız kullanıcı kendisi yazar.`);
+    if (!/\[K:[0-9a-f]{6,}|K:[0-9a-f]{6,}|onaylı öneri #\d+|kullanıcı beyanı/i.test(a.kaynak)) {
+      hata(`"${a.alan}" için kaynak K:kod, "onaylı öneri #N" ya da "kullanıcı beyanı" olmalı.`);
+    }
+  }
+  const r = vt.prepare("INSERT INTO yazma_planlari (sistem, adres, alanlar, olusturma) VALUES (?, ?, ?, ?)")
+    .run(String(s.sistem), String(s.adres), JSON.stringify(alanlar), new Date().toISOString());
+  const p = vt.prepare("SELECT * FROM yazma_planlari WHERE id = ?").get(Number(r.lastInsertRowid));
+  vt.close();
+  adimKaydet(klasor, { eylem: "yazma_plani", adres: p.adres, ayrinti: JSON.stringify({ id: p.id, alan: alanlar.length }) });
+  yaz(planTablosu(p));
+  yaz(`\nKullanıcı tabloyu kontrol edip onaylarsa: akreddit yazma-onay ${p.id} --onaylayan "Ad Soyad"`);
+}
+
+function yazmaOnay(s) {
+  const { klasor, vt } = klasorVeVt();
+  const id = Number(s._[0]);
+  if (!id || !s.onaylayan) hata("Kullanım: akreddit yazma-onay <id> --onaylayan \"Ad Soyad\"");
+  const an = new Date();
+  // Aynı anda tek onaylı plan: öncekiler iptal edilir.
+  vt.prepare("UPDATE yazma_planlari SET durum = 'iptal', sonuc = 'yeni plan onaylandı' WHERE durum = 'onaylandi' AND id <> ?").run(id);
+  const r = vt.prepare("UPDATE yazma_planlari SET durum = 'onaylandi', onaylayan = ?, onay_zamani = ?, son_kullanma = ? WHERE id = ? AND durum = 'bekliyor'")
+    .run(String(s.onaylayan), an.toISOString(), new Date(an.getTime() + PLAN_OMRU_DK * 60000).toISOString(), id);
+  if (Number(r.changes) !== 1) hata(`#${id} onay bekleyen bir plan değil.`);
+  vt.close();
+  adimKaydet(klasor, { eylem: "yazma_onaylandi", ayrinti: JSON.stringify({ id }), onaylayan: String(s.onaylayan) });
+  yaz(`Plan #${id} ${PLAN_OMRU_DK} dakika geçerli. Tarayıcıda her yazma işleminde Claude Code ayrıca izin soracak.`);
+}
+
+function yazmaBitir(s) {
+  const { klasor, vt } = klasorVeVt();
+  const [id, durum] = s._;
+  if (!id || !["tamamlandi", "iptal"].includes(durum)) hata("Kullanım: akreddit yazma-bitir <id> tamamlandi|iptal --sonuc \"…\"");
+  const r = vt.prepare("UPDATE yazma_planlari SET durum = ?, sonuc = ? WHERE id = ? AND durum IN ('bekliyor', 'onaylandi')")
+    .run(durum, String(s.sonuc || ""), Number(id));
+  if (Number(r.changes) !== 1) hata(`#${id} açık bir plan değil.`);
+  vt.close();
+  adimKaydet(klasor, { eylem: `yazma_${durum}`, ayrinti: JSON.stringify({ id: Number(id), sonuc: s.sonuc || "" }) });
+  yaz(`Plan #${id}: ${durum}.`);
+}
+
+function yazmaPlanlari() {
+  const { vt } = klasorVeVt();
+  const planlar = vt.prepare("SELECT * FROM yazma_planlari ORDER BY id DESC LIMIT 20").all();
+  vt.close();
+  if (!planlar.length) return yaz("Yazma planı yok.");
+  planlar.forEach((p) => yaz(`${planTablosu(p)}\n`));
+}
+
 const YARDIM = `Akreddit
 
   baglan [--cihaz-adi ad]   Bu bilgisayarı tezatlas.com hesabına bağlar
@@ -528,7 +622,11 @@ const YARDIM = `Akreddit
   oneriler [--durum bekliyor|onaylandi|duzeltildi|reddedildi] [--hepsi]
   karar <id> onayla|reddet|duzelt --onaylayan "Ad Soyad" [--puan N|--iliskisiz|--yetersiz|--deger "…"]
   matris [--csv]            Onaylı değerlerden matrisi raporlar/ altına yazar
-  rapor-denetle <dosya.md>  Kaynak göstergelerini kanıtlara karşı denetler`;
+  rapor-denetle <dosya.md>  Kaynak göstergelerini kanıtlara karşı denetler
+  yazma-plani --sistem ad --adres URL --alanlar '[{"alan","mevcut","yeni","kaynak"}]'
+  yazma-onay <id> --onaylayan "Ad Soyad"   Planı 20 dakikalığına açar
+  yazma-bitir <id> tamamlandi|iptal --sonuc "…"
+  yazma-planlari            Son yazma planları`;
 
 const [komut, ...geri] = process.argv.slice(2);
 const s = secenekler(geri);
@@ -537,6 +635,7 @@ const KOMUTLAR = {
   kanitlar: kanitlariListele, "cikti-ekle": ciktiEkle, ciktilar: ciktilariListele,
   "oner-etiket": onerEtiket, "oner-matris": onerMatris, oneriler: onerileriListele,
   karar, matris: matrisOlustur, "rapor-denetle": raporDenetle,
+  "yazma-plani": yazmaPlani, "yazma-onay": yazmaOnay, "yazma-bitir": yazmaBitir, "yazma-planlari": yazmaPlanlari,
 };
 if (!KOMUTLAR[komut]) { yaz(YARDIM); process.exit(komut ? CIKIS.hata : 0); }
 await KOMUTLAR[komut](s);
