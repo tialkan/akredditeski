@@ -19,7 +19,7 @@ const dersHtml = [
   tablo([["İş Yükü", "Sayısı", "Süre", "Toplam İş Yükü (Saat)"], ["Ders Süresi", "14", "3", "42"], ["Ödevler", "14", "3", "42"], ["AKTS Kredisi : 3", "", "", "3"]]),
   tablo([["Sıra No", "Açıklama"], ["1", "HTML sayfası tasarlar."], ["2", "CSS uygular."]]),
   tablo([["Hafta", "Konu"], ...Array.from({ length: 14 }, (_, i) => [String(i + 1), `Konu ${i + 1}`])]),
-  tablo([["", "P1", "P2"], ["Tüm", "4", "2"], ["Ö1", "3", "2"], ["Ö2", "3", "1"]]),
+  tablo([["", "P1", "P2"], ["Tüm", "4", "2"], ["Ö1", "3", "2"], ["Be2", "3", "1"], ["Ye3", "2", "1"]]),
 ].join("");
 
 test("ders sayfası ayrıştırılır, toplam satırları iş yüküne katılmaz", () => {
@@ -32,6 +32,8 @@ test("ders sayfası ayrıştırılır, toplam satırları iş yüküne katılmaz
   assert.equal(d.ciktilar[1].kod, "Ö2");
   assert.equal(d.haftalar, 14);
   assert.equal(d.katki["Tüm"].P1, "4");
+  assert.equal(d.katki["Ö2"].P1, "3", "Be2 satırı Ö2 sayılır");
+  assert.ok(d.katki["Ö3"], "Ye3 satırı Ö3 sayılır");
 });
 
 test("denetim kuralları", () => {
@@ -57,4 +59,5 @@ test("denetim kuralları", () => {
   assert.match(kural("matris-tutarlilik", "TBP201").aciklama, /P1 4\/3/);
   assert.match(kural("katki-destegi", "TBP201").aciklama, /P1 \(genel 4, en yüksek 3\)/);
   assert.equal(b.filter((x) => x.ders === "OSD101").length, 1, "boş sayfa tek bulgu üretir");
+  assert.match(b.find((x) => x.kural === "ders-ciktisi" && x.ders === "TBP201").aciklama, /Ö3 öğrenme çıktıları listesinde görünmüyor/);
 });

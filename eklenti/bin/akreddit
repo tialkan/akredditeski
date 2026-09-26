@@ -213,6 +213,31 @@ const YEREL_GOCLER = [
   ) STRICT;
   CREATE TRIGGER aktarim_degismez BEFORE UPDATE ON bologna_aktarimlari BEGIN SELECT RAISE(ABORT, 'Aktarım kaydı değiştirilemez.'); END;
   `,
+  // 5: Bir ders sayfasının tamamı tek planda yazılabilsin diye 60 alan sınırı kalkar (üst sınır araçta 400).
+  `
+  CREATE TABLE yazma_planlari_yeni (
+    id INTEGER PRIMARY KEY,
+    sistem TEXT NOT NULL,
+    adres TEXT NOT NULL,
+    alanlar TEXT NOT NULL CHECK (json_valid(alanlar) AND json_array_length(alanlar) >= 1),
+    durum TEXT NOT NULL DEFAULT 'bekliyor' CHECK (durum IN ('bekliyor', 'onaylandi', 'tamamlandi', 'iptal')),
+    onaylayan TEXT,
+    onay_zamani TEXT,
+    son_kullanma TEXT,
+    sonuc TEXT,
+    olusturma TEXT NOT NULL,
+    CHECK (durum = 'bekliyor' OR durum = 'iptal' OR (onaylayan IS NOT NULL AND onay_zamani IS NOT NULL))
+  ) STRICT;
+  INSERT INTO yazma_planlari_yeni SELECT * FROM yazma_planlari;
+  DROP TABLE yazma_planlari;
+  ALTER TABLE yazma_planlari_yeni RENAME TO yazma_planlari;
+  CREATE TRIGGER plan_gecisi BEFORE UPDATE ON yazma_planlari
+  WHEN NOT ((OLD.durum = 'bekliyor' AND NEW.durum IN ('onaylandi', 'iptal'))
+         OR (OLD.durum = 'onaylandi' AND NEW.durum IN ('tamamlandi', 'iptal')))
+    OR NEW.alanlar <> OLD.alanlar OR NEW.adres <> OLD.adres
+  BEGIN SELECT RAISE(ABORT, 'Yazma planı bu şekilde değiştirilemez. Yeni plan aç.'); END;
+  CREATE TRIGGER plan_silinmez BEFORE DELETE ON yazma_planlari BEGIN SELECT RAISE(ABORT, 'Yazma planı silinemez.'); END;
+  `,
 ];
 
 function klasorBul(baslangic = process.cwd()) {
@@ -545,6 +570,8 @@ function raporDenetle(s) {
 // ---------- Faz 5: onaylı yazma planları ----------
 
 const PLAN_OMRU_DK = 20;
+const PLAN_EN_UZUN_DK = 120;
+const PLAN_EN_COK_ALAN = 400;
 
 function planTablosu(p) {
   const alanlar = JSON.parse(p.alanlar);
@@ -564,6 +591,7 @@ function yazmaPlani(s) {
   let alanlar;
   try { alanlar = JSON.parse(String(s.alanlar)); } catch { hata("--alanlar geçerli bir JSON dizisi olmalı."); }
   if (!Array.isArray(alanlar) || !alanlar.length) hata("En az bir alan ver.");
+  if (alanlar.length > PLAN_EN_COK_ALAN) hata(`Bir planda en fazla ${PLAN_EN_COK_ALAN} alan olabilir. Dersi sekmelere böl.`);
   for (const a of alanlar) {
     if (!a.alan || typeof a.yeni !== "string" || !a.kaynak) hata("Her alanda alan, yeni ve kaynak olmalı. Kaynağı olmayan değer yazılmaz.");
     if (/parola|şifre|sifre|password|pin|doğrulama kodu/i.test(a.alan)) hata(`"${a.alan}" bir giriş bilgisi alanı. Bunu yalnız kullanıcı kendisi yazar.`);
@@ -585,14 +613,15 @@ function yazmaOnay(s) {
   const id = Number(s._[0]);
   if (!id || !s.onaylayan) hata("Kullanım: akreddit yazma-onay <id> --onaylayan \"Ad Soyad\"");
   const an = new Date();
+  const omur = Math.min(Number(s.sure) || PLAN_OMRU_DK, PLAN_EN_UZUN_DK);
   // Aynı anda tek onaylı plan: öncekiler iptal edilir.
   vt.prepare("UPDATE yazma_planlari SET durum = 'iptal', sonuc = 'yeni plan onaylandı' WHERE durum = 'onaylandi' AND id <> ?").run(id);
   const r = vt.prepare("UPDATE yazma_planlari SET durum = 'onaylandi', onaylayan = ?, onay_zamani = ?, son_kullanma = ? WHERE id = ? AND durum = 'bekliyor'")
-    .run(String(s.onaylayan), an.toISOString(), new Date(an.getTime() + PLAN_OMRU_DK * 60000).toISOString(), id);
+    .run(String(s.onaylayan), an.toISOString(), new Date(an.getTime() + omur * 60000).toISOString(), id);
   if (Number(r.changes) !== 1) hata(`#${id} onay bekleyen bir plan değil.`);
   vt.close();
   adimKaydet(klasor, { eylem: "yazma_onaylandi", ayrinti: JSON.stringify({ id }), onaylayan: String(s.onaylayan) });
-  yaz(`Plan #${id} ${PLAN_OMRU_DK} dakika geçerli. Tarayıcıda her yazma işleminde Claude Code ayrıca izin soracak.`);
+  yaz(`Plan #${id} ${omur} dakika geçerli. Tarayıcıda her yazma işleminde Claude Code ayrıca izin soracak.`);
 }
 
 function yazmaBitir(s) {
@@ -798,6 +827,23 @@ async function bolognaDenetle(s) {
   yaz(metin);
 }
 
+async function bolognaTaslakDenetle(s) {
+  const dosya = s._[0];
+  if (!dosya || !existsSync(dosya)) hata("Taslak dosyasını ver: akreddit bologna-taslak-denetle raporlar/bologna/TBP201.json");
+  let taslak;
+  try { taslak = JSON.parse(readFileSync(dosya, "utf8")); } catch (e) { hata(`Taslak geçerli JSON değil: ${e.message}`); }
+  const { taslakDenetle } = await import(new URL("../lib/bologna-taslak.mjs", import.meta.url).href);
+  const sonuc = taslakDenetle(taslak, { bolen: Number(s.bolen) || 30 });
+  yaz(`Taslak: ${taslak.kod || "?"} ${taslak.ad || ""}`);
+  yaz(`İş yükü: ${sonuc.isToplam} / ${sonuc.hedef} saat`);
+  sonuc.hatalar.forEach((h) => yaz(`HATA ${h}`));
+  sonuc.uyarilar.forEach((u) => yaz(`Uyarı ${u}`));
+  const klasor = klasorBul();
+  if (klasor) adimKaydet(klasor, { eylem: "bologna_taslak_denetlendi", ayrinti: JSON.stringify({ kod: taslak.kod, hata: sonuc.hatalar.length, uyari: sonuc.uyarilar.length }) });
+  if (sonuc.hatalar.length) process.exit(CIKIS.hata);
+  yaz("Taslak bütün kurallardan geçti.");
+}
+
 const YARDIM = `Akreddit
 
   baglan [--cihaz-adi ad]   Bu bilgisayarı tezatlas.com hesabına bağlar
@@ -819,12 +865,13 @@ const YARDIM = `Akreddit
   matris [--csv]            Onaylı değerlerden matrisi raporlar/ altına yazar
   rapor-denetle <dosya.md>  Kaynak göstergelerini kanıtlara karşı denetler
   yazma-plani --sistem ad --adres URL --alanlar '[{"alan","mevcut","yeni","kaynak"}]'
-  yazma-onay <id> --onaylayan "Ad Soyad"   Planı 20 dakikalığına açar
+  yazma-onay <id> --onaylayan "Ad Soyad" [--sure dk]   Planı açar (varsayılan 20, en çok 120 dakika)
   yazma-bitir <id> tamamlandi|iptal --sonuc "…"
   yazma-planlari            Son yazma planları
   pilot-raporu [--eski-saat N]  Süre, karar oranları ve kapsamı raporlar/pilot-raporu.md'ye yazar
   bologna-al <adres> [--dersler A,B]  Programın herkese açık Bologna verisini kanıt olarak alır
-  bologna-denetle [--akts-saat 25-30]  AKTS, değerlendirme, matris tutarlılığı ve diğer kuralları denetler`;
+  bologna-denetle [--akts-saat 25-30]  AKTS, değerlendirme, matris tutarlılığı ve diğer kuralları denetler
+  bologna-taslak-denetle <taslak.json> [--bolen 30]  Yazılacak ders sayfası taslağını K1-K12 kurallarıyla denetler`;
 
 const [komut, ...geri] = process.argv.slice(2);
 const s = secenekler(geri);
@@ -835,7 +882,7 @@ const KOMUTLAR = {
   karar, matris: matrisOlustur, "rapor-denetle": raporDenetle,
   "yazma-plani": yazmaPlani, "yazma-onay": yazmaOnay, "yazma-bitir": yazmaBitir, "yazma-planlari": yazmaPlanlari,
   "pilot-raporu": pilotRaporu,
-  "bologna-al": bolognaAl, "bologna-denetle": bolognaDenetle,
+  "bologna-al": bolognaAl, "bologna-denetle": bolognaDenetle, "bologna-taslak-denetle": bolognaTaslakDenetle,
 };
 if (!KOMUTLAR[komut]) { yaz(YARDIM); process.exit(komut ? CIKIS.hata : 0); }
 await KOMUTLAR[komut](s);

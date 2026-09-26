@@ -1,10 +1,10 @@
 # Akreddit ödeme ve iade koşulları
 
-Sürüm 0.1 · [yayım tarihi]
+Sürüm 0.2 · Taslak, hukuki incelemede
 
 ## 1. Tutar
 
-Hizmet bedeli 230 ABD dolarının Türk lirası karşılığıdır. Karşılık, Türkiye Cumhuriyet Merkez Bankası'nın o gün yayımladığı ABD doları döviz satış kuruyla hesaplanır ve tam liraya yukarı yuvarlanır. Başvuruda gösterilen tutar 3 gün geçerlidir.
+Hizmet bedeli sitede Türk lirası olarak gösterilir. Tutar, Türkiye Cumhuriyet Merkez Bankası'nın o gün yayımladığı döviz satış kuruyla hesaplanır ve 100 TL'nin katına yukarı yuvarlanır.
 
 Ankara Yıldırım Beyazıt Üniversitesi mensuplarına, kurumsal e-posta adresiyle başvurmaları şartıyla %50 indirim uygulanır.
 

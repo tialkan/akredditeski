@@ -103,11 +103,16 @@ export function dersSayfasiCoz(html) {
   const ciktiTablosu = bul(/Sıra No|No.*A[cç]ıklama|Description/i) ?? [];
   const ciktilar = ciktiTablosu.slice(1).filter((r) => r.length >= 2 && sayi(r[0]) !== null && r[1]).map((r) => ({ kod: `Ö${sayi(r[0])}`, metin: r[1] }));
   const haftalar = (bul(/Hafta|Week/i) ?? []).slice(1).filter((r) => sayi(r[0]) !== null && r[1]).length;
-  const katkiTablosu = t.find((x) => (x[0] ?? []).some((h) => /^P\d+$/.test(h)) && x.some((r) => /^(Tüm|All|Ö\d+)$/.test(r[0] ?? "")));
+  // Katkı satırları "Ö3" ya da çıktının türüne göre "Bi3" (bilgi), "Be3" (beceri), "Ye3" (yetkinlik) diye adlandırılır.
+  const katkiTablosu = t.find((x) => (x[0] ?? []).some((h) => /^P\d+$/.test(h)) && x.some((r) => /^(Tüm|All|Ö\d+|Bi\d+|Be\d+|Ye\d+)$/.test(r[0] ?? "")));
   const katki = {};
   if (katkiTablosu) {
     const pk = katkiTablosu[0].slice(1);
-    for (const r of katkiTablosu.slice(1)) if (r[0]) katki[r[0]] = Object.fromEntries(pk.map((p, i) => [p, r[i + 1] ?? ""]));
+    for (const r of katkiTablosu.slice(1)) {
+      if (!r[0]) continue;
+      const ad = /^(Ö|Bi|Be|Ye)\d+$/.test(r[0]) ? `Ö${sayi(r[0])}` : r[0];
+      katki[ad] = Object.fromEntries(pk.map((p, i) => [p, r[i + 1] ?? ""]));
+    }
   }
   return { yariyil: sayi(yariyil), kod, ad, tul, kredi: sayi(kredi), akts: sayi(akts), guncelleme, bilgiler, degerlendirme, isyuku, dersYapisi, ciktilar, haftalar, katki };
 }
@@ -196,6 +201,12 @@ export function denetle(veri, { aktsSaat = [25, 30], guncellikAy = 12 } = {}) {
     const saat = (d.tul || "").split("+").map(Number).reduce((t, x) => t + (x || 0), 0);
     if (saat > 0 && d.kredi === 0) ekle("uyari", d.kod, "kredi", `T+U+L ${d.tul} olduğu hâlde ulusal kredi 0.`);
     if (!d.ciktilar.length) ekle("hata", d.kod, "ders-ciktisi", "Dersin öğrenme çıktıları yok.");
+    const listede = new Set(d.ciktilar.map((c) => c.kod));
+    const katkida = Object.keys(d.katki).filter((k) => /^Ö\d+$/.test(k));
+    const gorunmeyen = katkida.filter((k) => !listede.has(k));
+    if (d.ciktilar.length && gorunmeyen.length) {
+      ekle("hata", d.kod, "ders-ciktisi", `Katkı tablosunda olan ${gorunmeyen.join(", ")} öğrenme çıktıları listesinde görünmüyor. Herkese açık sayfada yalnız ${[...listede].join(", ")} var.`);
+    }
     if (d.haftalar && d.haftalar < 14) ekle("uyari", d.kod, "haftalar", `Haftalık konu sayısı ${d.haftalar}.`);
     const [g, a, y] = (d.guncelleme || "").split(".").map(Number);
     if (y && (bugun - new Date(y, a - 1, g).getTime()) / (30 * 86400000) > guncellikAy) ekle("uyari", d.kod, "guncellik", `Son güncelleme ${d.guncelleme}.`);

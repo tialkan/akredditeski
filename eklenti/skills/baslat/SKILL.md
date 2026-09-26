@@ -42,6 +42,7 @@ Cevaplara göre kısa bir plan yaz (`raporlar/plan.md`), kaydet, kullanıcıya �
 
 - Belge eklemek ve incelemek: `kanit-inceleme`
 - Bologna paketini almak ve denetlemek: `bologna` (çoğu zaman en iyi başlangıç)
+- Kendi derslerinin Bologna sayfalarını OBS'de doldurmak: `bologna-doldur`
 - Çıktılar ve matris: `matris`
 - Rapor bölümü yazmak: `rapor`
 - Bologna, AVESİS gibi sistemlerden bilgi almak: `sistemden-oku`

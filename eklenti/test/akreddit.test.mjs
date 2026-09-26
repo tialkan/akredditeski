@@ -214,6 +214,17 @@ test("Faz 6: pilot raporu", async () => {
   assert.ok(existsSync(join(k, "raporlar", "pilot-raporu.md")));
 });
 
+test("büyük yazma planı (bütün ders sayfası) kabul edilir", async () => {
+  const k = join(EV, "program");
+  const kanitKod = (await calistir(["kanitlar"], k)).cikti.match(/K:([0-9a-f]{8})/)[1];
+  const alanlar = Array.from({ length: 150 }, (_, i) => ({ alan: `Hafta ${i}`, mevcut: "", yeni: `Konu ${i}`, kaynak: `K:${kanitKod}` }));
+  const r = await calistir(["yazma-plani", "--sistem", "OBS", "--adres", "https://obs/ders", "--alanlar", JSON.stringify(alanlar)], k);
+  assert.equal(r.kod, 0, r.cikti.slice(0, 300));
+  const id = r.cikti.match(/planı #(\d+)/)[1];
+  assert.match((await calistir(["yazma-onay", id, "--onaylayan", "Deneme Hoca", "--sure", "500"], k)).cikti, /120 dakika/);
+  await calistir(["yazma-bitir", id, "iptal", "--sonuc", "test"], k);
+});
+
 test("promosyonlu hesap ücretsiz görünür", async () => {
   promosyonlu = true;
   const r = await calistir(["durum"]);
