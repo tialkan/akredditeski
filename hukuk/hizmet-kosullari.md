@@ -1,6 +1,6 @@
 # Akreddit hizmet koşulları
 
-Sürüm 1.0 · Taslak, hukuki incelemede
+Sürüm 1.1 · Yürürlük tarihi: 26 Eylül 2026
 
 Bu metin, Akreddit iş akışının kullanımına ilişkin hak ve yükümlülükleri düzenleyen sözleşmedir. Kayıt formundaki onay kutusunu işaretleyip hesabını oluşturan kişi, bu metnin tamamını okuduğunu, anladığını ve kabul ettiğini beyan eder. Metni kabul etmeyen kişi hesap oluşturmamalı ve Akreddit'i kullanmamalıdır.
 
@@ -137,6 +137,8 @@ kullanmamayı kabul eder.
 13.1. Akreddit yerel çalışır. Çalışma klasöründeki belgeler, kurum sistemlerinden okunan bilgiler ve kurum sistemlerine ait giriş bilgileri Hazırlayan'ın sunucusuna gönderilmez.
 
 13.2. Eklenti çalışırken işlenen içerik, Kullanıcı'nın kendi Claude hesabı üzerinden Anthropic PBC'nin hizmetlerine iletilir. Bu iletim Kullanıcı ile Anthropic arasındaki sözleşmeye ve Anthropic'in gizlilik politikasına tabidir. Hazırlayan bu iletimin tarafı değildir.
+
+13.3. Hesap ve lisans sunucusu Almanya'da, Hetzner Online GmbH altyapısında barındırılır. Hesap verileri bu nedenle yurt dışına aktarılır. Aktarımın ayrıntıları ve dayanağı aydınlatma metninin 7. maddesindedir.
 
 13.3. Hazırlayan'ın sunucusunda yalnız hesap, lisans ve güvenlik için gereken veriler işlenir. Bu verilerin işlenmesi aydınlatma metninde ayrıntılı olarak açıklanmıştır.
 

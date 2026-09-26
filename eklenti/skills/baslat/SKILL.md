@@ -27,18 +27,43 @@ Oturumun Opus 5.5 ve düşük düşünme düzeyinde (low effort) çalışması �
 
 `akreddit ozet` çalıştır.
 
-- **Klasör yoksa:** Hangi program için çalışacağını sor (örnek: "Bilgisayar Programcılığı"). Belgeler klasörünün içinde o adla bir klasör öner, onay al, `akreddit kur "<yol>"` çalıştır, sonra `cd "<yol>"` ile o klasöre geç. Yeniden başlatma gerekmez.
-- **Klasör varsa:** Son adımları iki üç cümleyle özetle ve "Kaldığımız yer: … Devam edelim mi?" diye sor.
+- **Klasör yoksa:** Program adı mesajda varsa onu kullan, yoksa seçeneklerle sor (kullanıcının AVESİS ya da Bologna bilgisinden çıkan programlar önce, sonra "kendin yaz"). Belgeler klasörünün içinde o adla bir klasör aç (makul varsayılan, ayrıca onay isteme), `akreddit kur "<yol>"` çalıştır, sonra `cd "<yol>"` ile o klasöre geç. Yeniden başlatma gerekmez.
+- **Klasör varsa:** Son adımları iki üç cümleyle özetle ve sıradaki adımı öner ve hemen başla: "Kaldığımız yer: … Şimdi … yapıyorum. Başka bir şey istersen söyle."
 
 ## 3. İlk görüşme (yeni klasörde)
 
-Soruları **tek tek** sor, her cevabı kaydet (`akreddit adim baslangic --ayrinti '<json>'`):
+`akreddit-kurallari` içindeki soru sorma kurallarına uy. Önce kendin çıkar:
 
-1. Program düzeyi: önlisans, lisans, lisansüstü ya da kurum düzeyi.
-2. Hangi çerçeveye hazırlanıyorsun? Resmî ölçüt belgesini ilgili kuruluşun sitesinden indirip bu klasöre bırakmasını iste. Ölçüt metnini hafızandan yazma.
-3. Hangi sistemleri kullanıyorsunuz? (Bologna, AVESİS, OBS, EBYS, diğer)
-4. Ne hazırlamak istiyorsun? Öz değerlendirme raporu, ders-program çıktısı matrisi, kanıt dosyası ya da hepsi.
-5. Teslim tarihi.
+- Kullanıcının ilk mesajındaki program, kurum ve amaç bilgisini kullan.
+- Program adı belliyse kurumun Bologna sayfasını bul, `akreddit bologna-al` ile oku. Düzey, bölüm, dersler ve program çıktıları buradan gelir.
+- Klasöre bırakılmış belgelerin adlarından çerçeveyi ve hazırlanan işi tahmin et.
+
+Sonra tek bir özet göster ve yalnız eksikleri sor:
+
+```
+Anladıklarım:
+1. Program: Bilgisayar Programcılığı, önlisans (Bologna sayfasından)
+2. Çerçeve: YÖKAK program değerlendirmesi (varsayılan, belge yok)
+3. Sistemler: Bologna ve AVESİS (kurumun sitesinden)
+4. İş: önce Bologna denetimi, sonra matris (önerim)
+5. Teslim tarihi: bilinmiyor
+
+Yanlış olanın numarasını ve doğrusunu yaz. Doğruysa "tamam" de.
+```
+
+Bilinmeyen her madde seçeneklerle sorulur. Örnek teslim tarihi sorusu:
+
+```
+Teslim tarihi ne zaman?
+A) Belli değil, işi parça parça ilerletelim (Önerilen: plan buna göre esnek kurulur)
+B) Bu ay içinde
+C) Bu dönem sonunda
+D) Tarihi yaz
+```
+
+Resmî ölçüt belgesi klasörde yoksa, ilgili kuruluşun sitesinden indirip klasöre bırakmasını iste. Ölçüt metnini hafızandan yazma. Belge gelene kadar ölçütten bağımsız işlerle (Bologna denetimi, kanıt envanteri) devam et, bekleme.
+
+Her cevabı kaydet: `akreddit adim baslangic --ayrinti '<json>'`.
 
 ## 4. Plan ve iş
 

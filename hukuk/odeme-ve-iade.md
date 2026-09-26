@@ -1,6 +1,6 @@
 # Akreddit ödeme ve iade koşulları
 
-Sürüm 0.2 · Taslak, hukuki incelemede
+Sürüm 0.2 · Yürürlük tarihi: 26 Eylül 2026
 
 ## 1. Tutar
 

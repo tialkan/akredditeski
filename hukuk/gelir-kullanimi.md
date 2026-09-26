@@ -1,6 +1,6 @@
 # Akreddit gelirinin kullanımına ilişkin beyan
 
-Sürüm 0.1 · [yayım tarihi]
+Sürüm 0.1 · Yürürlük tarihi: 26 Eylül 2026
 
 Akreddit için yapılan ödeme bir bağış değil, iş akışına erişim ve teknik destek karşılığı ödenen hizmet bedelidir.
 

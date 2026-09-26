@@ -9,15 +9,37 @@ description: Hocanın OBS'de kendi adına kayıtlı derslerinin Bologna ders bil
 
 Rolün: YÖKAK değerlendiricisinin titizliğiyle, o dersi fiilen veren bir öğretim elemanının alan hâkimiyetiyle çalışan Bologna ve AKTS uzmanı. Bu sayfa öğrencinin ders rehberi ve akreditasyonun resmî dayanağı. Kozmetik doldurma yapma.
 
-## 0. Sorular (tek mesajda)
+## 0. Önce çıkar, sonra tek mesajda sor
 
-1. Unvan, ad soyad (Dersi Verenler ve Koordinatör alanına birebir yazılır).
-2. AVESİS adresi ve kurumsal e-posta.
-3. Yalnız bu dönem verilen aktif dersler mi, pasif kayıtlar da mı?
-4. Belirli bir ders için uyarı var mı?
-5. İçeriği boş ya da yanlış olan dersler için: dersin adı ve birkaç cümlelik bilgi (ne anlatıyorsun, hangi araçları kullanıyorsun, proje var mı). Hoca bilmiyorsa bunu atla, ders adından ve programdan çıkar ama taslağı özellikle göster.
+`akreddit-kurallari` içindeki soru sorma kurallarına uy. Soru sormadan önce şunlardan doldur:
 
-Cevaplardan sonra çalışmaya başla. Hocayı yalnız her dersin onayında ve gerçekten gerekirse meşgul et.
+- Unvan, ad soyad, kurumsal e-posta ve AVESİS adresi: hocanın AVESİS profilinden ya da mevcut Bologna sayfalarındaki Dersi Veren alanından.
+- Dersler: OBS'de hocanın üzerindeki dersler. Varsayılan: yalnız bu dönemin aktif dersleri.
+- Ders içeriği: mevcut Bologna sayfası, programdaki benzer dersler, ders adı ve AKTS.
+
+Sonra tek mesajda özet göster, yalnız bulunamayanları seçenekli sor:
+
+```
+Anladıklarım:
+1. Dersi veren: Öğr. Gör. Ad Soyad, ad.soyad@uni.edu.tr (AVESİS'ten)
+2. Kapsam: bu dönemin 4 aktif dersi (Önerilen). Pasif kayıtlar için "hepsi" yaz.
+3. İçeriği zayıf dersler: TBP207 Mobil Programlama. Taslağı ders adından ve programdan çıkaracağım.
+
+Doğruysa "tamam" de. Bir derste özel bir durum varsa yaz (örnek: "TBP207'de Flutter kullanıyorum, dönem projesi var").
+```
+
+İçeriği boş bir ders için hocaya ne anlattığını sorman gerekirse seçenek ver:
+
+```
+TBP207 Mobil Programlama'da hangi araçla ilerliyorsun?
+A) Flutter ve Dart (Önerilen: programdaki diğer derslerle uyumlu)
+B) Kotlin ile Android Studio
+C) React Native
+D) Kendin yaz
+```
+
+Hoca cevap vermezse ya da "sen karar ver" derse önerilenle ilerle, taslağı gösterirken bu seçimi açıkça belirt.
+Hocayı yalnız her dersin onayında ve gerçekten gerekirse meşgul et.
 
 ## 1. Hazırlık
 

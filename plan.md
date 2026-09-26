@@ -275,6 +275,8 @@ Faz 1 ve 2 tezatlas deposunda, faz 3 ve sonrası akreddit deposunda yapılır.
 - **Bologna doldurma (eklenti 0.6.0).** Hocanın talimat dosyası (`bologna.md`, K1-K12) `bologna-doldur` skill'ine ve `bilgi/obs.md` ekran notuna dönüştü. `akreddit bologna-taslak-denetle` kontrol edilebilen kuralları uygular: kelime sınırları, ölçülebilir fiil, 8-12 kesintisiz çıktı ve tür dağılımı, iş yükü = AKTS × 30, değerlendirme ve ders yapısı %100, 14-16 hafta, ön hazırlık ve doküman, en az 2 kaynak, ayrıştırılmış katkı matrisi, 2-4 SKA, yetkililer, düşürülmüş Türkçe karakter. Taslak temiz geçmeden OBS'ye yazılmaz. Ders başına tek onaylı plan (en çok 400 alan, 120 dakika). Sayfada JavaScript ve onay penceresi yok, silmeyi hoca yapar.
 - **Bologna okuyucusu düzeltmesi:** katkı tablosunda "Be2", "Ye8" gibi türlü satır adları çıktı sayılır. Yeni kural: katkı tablosunda olup herkese açık çıktı listesinde görünmeyen çıktılar (TBP207'de Ö2-Ö8).
 - **Fiyat:** her yerde yalnız TL, güncel TCMB kuruyla 100 TL katına yukarı yuvarlanır.
+- **Hukuki metinler yürürlükte (26 Eylül 2026).** Hukukçu incelemesinden geçti, "taslak" ibaresi kalktı. Aydınlatma 1.1 ve koşullar 1.1: sunucu Hetzner Online GmbH (Almanya), yurt dışı aktarım KVKK m. 9 standart sözleşmesine dayanır.
+- **Soru protokolü (eklenti 0.7.0).** Önce çıkar, en son sor. Geri alınabilir kararları yapay zekâ verir. Her soruda 2-4 somut seçenek, ilki önerilen ve gerekçeli, sonuncusu "kendin yaz". Başlangıç ve Bologna doldurma tek özet gösterip yalnız eksikleri soruyor. Aynı protokol TezAtlas'a da eklendi.
 - **Sıradaki:** OBS ekranlarını bir derste gerçekten görmek (hoca ya da idareci oturumu gerekir), `bilgi/obs.md` notlarını doğrulamak. Sonra pilot.
 - **Faz 6 (pilot) öncesi mutlaka:** gerçek bir hocayla baştan sona kurulum ve bir oturum. Takıldığı her yeri not et, rehberi ve skill metnini ona göre düzelt.
 
@@ -282,6 +284,6 @@ Faz 1 ve 2 tezatlas deposunda, faz 3 ve sonrası akreddit deposunda yapılır.
 
 1. Sunucuya `AKREDDIT_ADMIN_PASSWORD` ve `AKREDDIT_ADMIN_TOTP` ekle (README'de üretme komutu var), TOTP'yi telefonuna tanımla.
 2. `/data` klasörünün kalıcı volume olduğunu doğrula, `betikler/akreddit-yedek.mjs` için gece cron'u kur, yedek klasörünü sunucu dışına eşitle.
-3. Hukukçu incelemesi, GİB özelgesi ve kurum görüşü. Sonra metinlerin sürümünü 1.0 yap ve `AKREDDIT_BASVURU_ACIK=1`.
+3. Hetzner ile KVKK standart sözleşmesini imzala ve imzadan sonra 5 iş günü içinde Kurul'a bildir. Hetzner'in DPA'sı AB içindir, Türk standart sözleşmesinin yerini tutmaz. Ücretli modele dönülürse GİB özelgesi ve kurum görüşü.
 4. Eklentiyi dağıtmak için bir GitHub deposu (özel ya da açık) aç ve bu klasörü oraya gönder. Kullanıcılar `claude plugin marketplace add <kullanici>/<depo>` ile kurar.
 5. İsteğe bağlı: Resend hesabı ve DNS kayıtları ile otomatik e-posta.

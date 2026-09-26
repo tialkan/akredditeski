@@ -1,6 +1,6 @@
 # Akreddit kişisel verilerin işlenmesine ilişkin aydınlatma metni
 
-Sürüm 1.0 · Taslak, hukuki incelemede
+Sürüm 1.1 · Yürürlük tarihi: 26 Eylül 2026
 
 Bu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun (bundan sonra "Kanun") 10. maddesi ve Aydınlatma Yükümlülüğünün Yerine Getirilmesinde Uyulacak Usul ve Esaslar Hakkında Tebliğ uyarınca, Akreddit hesabı oluşturan ve Akreddit'i kullanan kişilerin kişisel verilerinin hangi amaçlarla, hangi hukuki sebeplere dayanarak, hangi yöntemlerle işlendiğini, kimlere aktarılabileceğini ve Kanun'dan doğan haklarını açıklamak için hazırlanmıştır.
 
@@ -54,7 +54,7 @@ Kişisel verileriniz pazarlama, reklam ya da profil çıkarma amacıyla işlenme
 
 6.1. Kişisel verileriniz, yalnız yukarıdaki amaçlarla ve Kanun'un 8. ve 9. maddelerine uygun olarak aşağıdaki alıcı gruplarına aktarılabilir:
 
-1. **Barındırma ve altyapı hizmeti sağlayıcıları:** tezatlas.com'un çalıştığı sunucu ve ağ hizmetlerinin sağlanması amacıyla, veri işleyen sıfatıyla.
+1. **Barındırma hizmeti sağlayıcısı:** tezatlas.com, Hetzner Online GmbH (Industriestr. 25, 91710 Gunzenhausen, Almanya) sunucularında barındırılır. Sunucuların bulunduğu veri merkezleri Avrupa Birliği içindedir. Hetzner, veri işleyen sıfatıyla ve yalnız barındırma hizmetinin sağlanması amacıyla verilerinize erişebilir.
 2. **E-posta gönderim hizmeti sağlayıcısı:** otomatik e-posta gönderimi etkinleştirildiğinde yalnız ad ve e-posta adresinizin, zorunlu bildirimlerin iletilmesi amacıyla aktarılması. Bu hizmet etkinleştirilirse sağlayıcının adı ve ülkesi bu metnin yeni sürümünde belirtilir.
 3. **Yetkili kamu kurum ve kuruluşları ile yargı mercileri:** kanunen zorunlu hallerde ve talep edilen ölçüde.
 4. **Hukuki danışmanlar:** bir uyuşmazlık halinde hakların korunması için gereken ölçüde.
@@ -65,7 +65,15 @@ Kişisel verileriniz pazarlama, reklam ya da profil çıkarma amacıyla işlenme
 
 ## 7. Yurt dışına aktarım
 
-Barındırma, altyapı ya da e-posta gönderim hizmeti sağlayıcılarının sunucularının yurt dışında bulunması halinde kişisel verileriniz yurt dışına aktarılmış olur. Bu durumda aktarım Kanun'un 9. maddesinde öngörülen mekanizmalardan birine, özellikle Kurul tarafından ilan edilen standart sözleşmelere ya da yeterlilik kararına dayanılarak yapılır. Standart sözleşme kullanılması halinde, Kanun'un öngördüğü süre içinde Kurul'a bildirim yapılır.
+7.1. Hizmetin sunucusu yurt dışındadır. Bu nedenle hesap, kayıt, oturum, güvenlik ve işlem günlüğü verileriniz Almanya'ya aktarılır ve orada saklanır.
+
+7.2. Alıcı: Hetzner Online GmbH, Almanya. Alıcının sıfatı: veri işleyen. Aktarılan veriler: bu metnin 3. maddesinde sayılan ve sunucuda tutulan verilerin tamamı. Aktarım amacı: hizmetin barındırılması, çalıştırılması ve yedeklenmesi.
+
+7.3. Aktarımın dayanağı: Kanun'un 9. maddesi uyarınca Kurul tarafından ilan edilen standart sözleşme. Sözleşme imzalandıktan sonra beş iş günü içinde Kurul'a bildirilir. Almanya hakkında bir yeterlilik kararı ilan edilirse aktarım bu karara dayanır.
+
+7.4. Standart sözleşmenin veya uygun güvencelerin bulunmadığı istisnai hallerde aktarım, Kanun'un 9. maddesinin altıncı fıkrasında sayılan arızi hallerden birine dayanabilir. Bu durum sürekli aktarım için kullanılmaz.
+
+7.5. Akreddit eklentisinin bilgisayarınızda işlediği kurum belgeleri sunucumuza gönderilmez. Bu belgeler Claude Code aracılığıyla Anthropic'e iletilir. O aktarım sizin Anthropic ile aranızdaki ilişkiye tabidir ve bizim veri işlememiz kapsamında değildir.
 
 ## 8. Saklama süreleri ve imha
 

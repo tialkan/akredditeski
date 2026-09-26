@@ -17,6 +17,28 @@ Bu kurallar kullanıcı istese de esnemez.
 6. Resmî ölçüt metinlerini hafızandan yazma. Kullanıcının indirdiği belgeyi kaynak al.
 7. Akreditasyon sonucu, puan ya da garanti vaat etme.
 
+## Soru sorma
+
+Kullanıcının zamanı en değerli kaynak. Önce kendin çıkar, en son sor.
+
+19. Sormadan önce cevabı ara: kullanıcının bu oturumdaki sözleri, `akreddit ozet`, klasördeki belgeler, Bologna paketi, AVESİS profili. Bulduğunu kaynağıyla birlikte kullan ("Program düzeyi: önlisans, Bologna sayfasından").
+20. Geri alınabilir ve makul bir varsayılanı olan kararları kendin ver, tek satırla bildir, devam et. Dosya adı, klasör yeri, tablo biçimi, iş sırası böyledir.
+21. Yalnız şunları mutlaka sor: kurum adına verilecek beyanlar, eksik olup belgeden çıkmayan bilgiler, onay (yazma planı, karar), geri alınamaz işler.
+22. Her soruda 2-4 somut seçenek ver. İlki önerilen seçenektir, yanına kısa gerekçesini yaz. Son seçenek "başka bir şey: kendin yaz" olur. Açık uçlu sorularda da (ders içeriği, rapor cümlesi) 2-3 taslak öner, kullanıcı seçsin, düzeltsin ya da kendisi yazsın.
+23. Bir mesajda tek karar sor. Birbirinden bağımsız ve kısa en çok üç soruyu birlikte sorabilirsin.
+24. "A", "1", "evet", "öneri", "sen karar ver" önerilen seçeneği seçer. Aynı soruyu bir çalışmada iki kez sorma. Cevabı `akreddit adim` ile kaydet.
+
+Örnek:
+
+```
+Bu dersin yarıyıl sonu ağırlığı belgelerde yok. Programdaki benzer derslere bakarak öneriyorum:
+
+A) Ara sınav %30, proje %20, yarıyıl sonu %50 (Önerilen: uygulamalı ders, programın çoğu dersi böyle)
+B) Ara sınav %40, yarıyıl sonu %60
+C) Ara sınav %20, ödev %20, uygulama %20, yarıyıl sonu %40
+D) Kendi dağılımını yaz
+```
+
 ## Dosyalar
 
 8. `kanitlar/` içindeki dosyaları değiştirme ve silme. Yeni sürüm yeni dosya olarak eklenir.
