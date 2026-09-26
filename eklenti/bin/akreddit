@@ -3,7 +3,7 @@
 // Claude Code eklentisi bu aracı çağırır; elle de kullanılabilir.
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, appendFileSync } from "node:fs";
+import { appendFileSync, chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir, hostname } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 
@@ -603,6 +603,82 @@ function yazmaPlanlari() {
   planlar.forEach((p) => yaz(`${planTablosu(p)}\n`));
 }
 
+// ---------- Faz 6: pilot ölçümü ----------
+
+const OTURUM_ARASI_SAAT = 2;
+
+function pilotRaporu(s) {
+  const { klasor, vt } = klasorVeVt();
+  const adimlar = vt.prepare("SELECT zaman, eylem, ayrinti FROM adimlar ORDER BY zaman").all();
+  const oneriler = vt.prepare("SELECT tur, karar, inceleme FROM oneriler").all();
+  const planlar = vt.prepare("SELECT durum FROM yazma_planlari").all();
+  const kanitSayisi = vt.prepare("SELECT COUNT(*) AS n FROM kanitlar").get().n;
+  const etiketliKanit = vt.prepare("SELECT COUNT(DISTINCT kanit_id) AS n FROM oneriler WHERE tur = 'etiket' AND karar IN ('onaylandi', 'duzeltildi')").get().n;
+  const ciktiSayisi = vt.prepare("SELECT COUNT(*) AS n FROM ciktilar").get().n;
+  vt.close();
+
+  // Oturumlar: aralarında 2 saatten uzun boşluk olan adım grupları. Etkin süre grup sürelerinin toplamı.
+  const oturumlar = [];
+  for (const a of adimlar) {
+    const t = Date.parse(a.zaman);
+    const son = oturumlar.at(-1);
+    if (son && t - son.bitis <= OTURUM_ARASI_SAAT * 3600000) son.bitis = t;
+    else oturumlar.push({ baslangic: t, bitis: t });
+  }
+  const etkinSaat = oturumlar.reduce((t, o) => t + (o.bitis - o.baslangic), 0) / 3600000;
+
+  const say = (dizi, f) => dizi.filter(f).length;
+  const kararli = say(oneriler, (o) => o.karar !== "bekliyor");
+  const oran = (n) => (kararli ? `%${Math.round((100 * n) / kararli)}` : "-");
+  const denetimler = adimlar.filter((a) => a.eylem === "rapor_denetlendi").map((a) => JSON.parse(a.ayrinti || "{}"));
+  let yazmaIstegi = 0;
+  const gunlukKlasoru = join(klasor, "gunluk");
+  if (existsSync(gunlukKlasoru)) {
+    for (const d of readdirSync(gunlukKlasoru).filter((x) => x.endsWith(".jsonl"))) {
+      yazmaIstegi += readFileSync(join(gunlukKlasoru, d), "utf8").split("\n").filter((l) => l.includes('"tarayici_yazma_istegi"')).length;
+    }
+  }
+  const eski = s["eski-saat"] ? Number(s["eski-saat"]) : null;
+
+  const satirlar = [
+    "# Pilot raporu",
+    "",
+    `Klasör: ${basename(klasor)}. Oluşturma: ${new Date().toISOString().slice(0, 16).replace("T", " ")}.`,
+    "",
+    "## Süre",
+    "",
+    `- Çalışma oturumu: ${oturumlar.length}`,
+    `- Etkin süre: ${etkinSaat.toFixed(1)} saat (aralarında ${OTURUM_ARASI_SAAT} saatten kısa boşluk olan adımlar tek oturum sayıldı)`,
+    eski ? `- Eski yöntemle tahmini süre: ${eski} saat` : "- Eski yöntemle tahmini süre: girilmedi (--eski-saat N)",
+    eski ? `- İnsan süresindeki azalma: %${Math.round(100 * (1 - etkinSaat / eski))}` : "",
+    "",
+    "## Öneriler ve insan kararı",
+    "",
+    `- Öneri: ${oneriler.length} (etiket ${say(oneriler, (o) => o.tur === "etiket")}, matris ${say(oneriler, (o) => o.tur === "matris")})`,
+    `- Onaylanan: ${say(oneriler, (o) => o.karar === "onaylandi")} (${oran(say(oneriler, (o) => o.karar === "onaylandi"))})`,
+    `- Düzeltilen: ${say(oneriler, (o) => o.karar === "duzeltildi")} (${oran(say(oneriler, (o) => o.karar === "duzeltildi"))})`,
+    `- Reddedilen: ${say(oneriler, (o) => o.karar === "reddedildi")} (${oran(say(oneriler, (o) => o.karar === "reddedildi"))})`,
+    `- Karar bekleyen: ${say(oneriler, (o) => o.karar === "bekliyor")}`,
+    `- İnceleme notu alan: ${say(oneriler, (o) => o.inceleme)}`,
+    "",
+    "## Kanıt ve rapor",
+    "",
+    `- Kanıt dosyası: ${kanitSayisi}, onaylı etiketi olan: ${etiketliKanit}`,
+    `- Kayıtlı çıktı: ${ciktiSayisi}`,
+    `- Rapor denetimi: ${denetimler.length} kez, toplam hata ${denetimler.reduce((t, d) => t + (d.hata || 0), 0)}, uyarı ${denetimler.reduce((t, d) => t + (d.uyari || 0), 0)}`,
+    "",
+    "## Kurum sistemleri",
+    "",
+    `- Yazma planı: ${planlar.length} (tamamlanan ${say(planlar, (p) => p.durum === "tamamlandi")}, iptal ${say(planlar, (p) => p.durum === "iptal")})`,
+    `- Tarayıcı yazma isteği: ${yazmaIstegi}`,
+    "",
+    "Sınırlılık: süre adım kayıtlarından hesaplanır, modelin bekleme süresini de içerir. Düzeltme ve ret oranı yüksekse hız kazancı başarı sayılmaz.",
+  ].filter((x) => x !== "");
+  const metin = satirlar.join("\n").replace(/\n## /g, "\n\n## ").replace(/(## [^\n]+)\n/g, "$1\n\n");
+  writeFileSync(join(klasor, "raporlar", "pilot-raporu.md"), `${metin}\n`);
+  yaz(metin);
+}
+
 const YARDIM = `Akreddit
 
   baglan [--cihaz-adi ad]   Bu bilgisayarı tezatlas.com hesabına bağlar
@@ -626,7 +702,8 @@ const YARDIM = `Akreddit
   yazma-plani --sistem ad --adres URL --alanlar '[{"alan","mevcut","yeni","kaynak"}]'
   yazma-onay <id> --onaylayan "Ad Soyad"   Planı 20 dakikalığına açar
   yazma-bitir <id> tamamlandi|iptal --sonuc "…"
-  yazma-planlari            Son yazma planları`;
+  yazma-planlari            Son yazma planları
+  pilot-raporu [--eski-saat N]  Süre, karar oranları ve kapsamı raporlar/pilot-raporu.md'ye yazar`;
 
 const [komut, ...geri] = process.argv.slice(2);
 const s = secenekler(geri);
@@ -636,6 +713,7 @@ const KOMUTLAR = {
   "oner-etiket": onerEtiket, "oner-matris": onerMatris, oneriler: onerileriListele,
   karar, matris: matrisOlustur, "rapor-denetle": raporDenetle,
   "yazma-plani": yazmaPlani, "yazma-onay": yazmaOnay, "yazma-bitir": yazmaBitir, "yazma-planlari": yazmaPlanlari,
+  "pilot-raporu": pilotRaporu,
 };
 if (!KOMUTLAR[komut]) { yaz(YARDIM); process.exit(komut ? CIKIS.hata : 0); }
 await KOMUTLAR[komut](s);

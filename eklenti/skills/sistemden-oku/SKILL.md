@@ -5,6 +5,8 @@ description: Akreddit'te Bologna, AVESİS, OBS, EBYS gibi kurum sistemlerinden t
 
 # Kurum sistemlerinden okuma
 
+AVESİS için önce `${CLAUDE_PLUGIN_ROOT}/bilgi/avesis.md` sistem haritasını oku. Hangi sayfada ne olduğunu ve form alanlarını orada bulursun. Harita yol göstericidir, sayfanın kendisi esastır.
+
 Bu skill yalnız okur. Bir alanı doldurmak gerekirse `sisteme-yaz` skill'ine geç.
 
 1. Kullanıcıya hangi sayfadan ne alacağınızı söyle (örnek: "Bologna'dan TBP201'in öğrenme çıktılarını alacağız").

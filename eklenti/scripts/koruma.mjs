@@ -2,7 +2,8 @@
 //
 // Okuma: serbest. Yazma ("Kaydet" tıklaması dahil): onaylı ve süresi dolmamış bir yazma planı
 // gerekir, yalnız plandaki değerler yazılabilir ve her işlemde Claude Code kullanıcıya ayrıca
-// izin sorar. Kullanıcıya soru, yapay zekânın atlayamayacağı asıl güvencedir.
+// izin sorar. Tam yetki ve otomatik modda Claude Code soru sormaz; kullanıcı bu modu seçerek
+// yapay zekâya güvendiğini belirtmiştir. Plan ve değer denetimi her modda aynen çalışır.
 // Her zaman kapalı: parola alanları, dış kuruma son gönderim düğmeleri, tuşa basma, çerez,
 // depolama, ağ, sayfada kod çalıştırma, dosya yükleme ve listede olmayan her araç.
 import { appendFileSync, existsSync, mkdirSync } from "node:fs";
@@ -72,9 +73,6 @@ process.stdin.on("end", async () => {
     return reddet(`"${arac}" aracı kapalı. Tarayıcıda yalnız okuma ve onaylı alan doldurma yapılır.`);
   }
 
-  if (IZIN_SORMAYAN_MODLAR.has(g.permission_mode)) {
-    return reddet("Kurum sistemine yazmak için Claude Code izin soran modda olmalı. Kullanıcıdan izin modunu 'varsayılan'a almasını iste.");
-  }
   if (GIRIS_BILGISI.test(hedefMetni)) return reddet("Bu bir giriş bilgisi alanı. Parolayı ve doğrulama kodunu yalnız kullanıcı kendisi yazar.");
   if (arac === "type" && girdiler.submit) return reddet("Yazıp Enter ile göndermek kapalı. Önce yaz, kaydetme adımını ayrı yap.");
 
@@ -94,9 +92,10 @@ process.stdin.on("end", async () => {
     return reddet(`Plan #${plan.id} dışında değer: ${disarida.map((d) => `"${d.slice(0, 60)}"`).join(", ")}. Yalnız onaylı tablodaki değerler yazılır.`);
   }
 
-  gunlugeYaz(klasor, { eylem: "tarayici_yazma_istegi", arac, plan: plan.id, hedef: hedefMetni.slice(0, 200), degerler });
+  gunlugeYaz(klasor, { eylem: "tarayici_yazma_istegi", arac, plan: plan.id, mod: g.permission_mode, hedef: hedefMetni.slice(0, 200), degerler });
   const ozet = arac === "click"
     ? `"${girdiler.element}" düğmesine basılacak`
     : `${degerler.map((d) => `"${String(d).slice(0, 80)}"`).join(", ")} yazılacak`;
-  return yanit("ask", `Akreddit plan #${plan.id}: ${ozet} (${hedefMetni.slice(0, 120)}). Ekrandaki alanın doğru olduğunu kontrol edip onayla.`);
+  const karar = IZIN_SORMAYAN_MODLAR.has(g.permission_mode) ? "allow" : "ask";
+  return yanit(karar, `Akreddit plan #${plan.id}: ${ozet} (${hedefMetni.slice(0, 120)}). Ekrandaki alanın doğru olduğunu kontrol edip onayla.`);
 });

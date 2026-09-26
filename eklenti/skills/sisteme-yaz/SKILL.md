@@ -5,6 +5,8 @@ description: Akreddit'te onaylı kanıt ve kararlara dayanarak Bologna, AVESİS,
 
 # Kurum sistemine yazma
 
+AVESİS için önce `${CLAUDE_PLUGIN_ROOT}/bilgi/avesis.md` sistem haritasını oku. Hangi sayfada ne olduğunu ve form alanlarını orada bulursun. Harita yol göstericidir, sayfanın kendisi esastır.
+
 Yazma her zaman üç kapıdan geçer: **tablo onayı**, **Claude Code'un izin sorusu**, **son gönderimin kullanıcıda kalması.** Bunlardan birini atlamaya çalışma.
 
 ## 1. Hazırlık
@@ -36,4 +38,4 @@ Yazma her zaman üç kapıdan geçer: **tablo onayı**, **Claude Code'un izin so
 14. İş bitince sonucu kaydet: `akreddit yazma-bitir <id> tamamlandi --sonuc "<ne yapıldı>"`. Vazgeçildiyse `iptal`.
 15. `akreddit adim sisteme_yazildi --adres "<URL>" --ekran "<görüntü yolu>" --onaylayan "<Ad Soyad>"` ile kaydet.
 
-Claude Code tam yetki ya da otomatik moddaysa yazma çalışmaz. Kullanıcıdan izin modunu varsayılana almasını iste.
+Claude Code tam yetki ya da otomatik moddaysa yazma anında soru çıkmaz. Bu yüzden bu modlarda tablo onayını sohbette mutlaka al ve her sayfadan sonra ekran görüntüsünü göster.

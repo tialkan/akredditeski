@@ -180,7 +180,10 @@ test("Faz 5: yazma planı ve tarayıcı koruması", async () => {
   assert.match((await kanca("type", { element: "Öğrenme çıktısı 1", text: "Uydurma değer" })).neden, /Plan #\d+ dışında/);
   assert.equal((await kanca("fill_form", { fields: [{ name: "ÖÇ1", value: "Web sayfası tasarlar." }] })).karar, "ask");
   assert.equal((await kanca("type", { element: "Öğrenme çıktısı 1", text: "Web sayfası tasarlar.", submit: true })).karar, "deny");
-  assert.match((await kanca("type", { element: "Öğrenme çıktısı 1", text: "Web sayfası tasarlar." }, "bypassPermissions")).neden, /izin soran modda/);
+  // Tam yetki modunda soru sorulmaz ama plan ve değer denetimi sürer.
+  assert.equal((await kanca("type", { element: "Öğrenme çıktısı 1", text: "Web sayfası tasarlar." }, "bypassPermissions")).karar, "allow");
+  assert.equal((await kanca("type", { element: "Öğrenme çıktısı 1", text: "Uydurma değer" }, "bypassPermissions")).karar, "deny");
+  assert.equal((await kanca("click", { element: "Onaya Gönder" }, "auto")).karar, "deny");
   assert.match((await kanca("type", { element: "Kullanıcı şifresi", text: "Web sayfası tasarlar." })).neden, /giriş bilgisi/);
 
   // Düğmeler: gönderim hep kapalı, gezinme serbest, kaydet sorulur.
@@ -196,6 +199,17 @@ test("Faz 5: yazma planı ve tarayıcı koruması", async () => {
   assert.throws(() => vt.exec("UPDATE yazma_planlari SET durum = 'onaylandi'"), /değiştirilemez/);
   vt.close();
   assert.ok(readFileSync(join(k, "gunluk", `${new Date().toISOString().slice(0, 10)}.jsonl`), "utf8").includes("tarayici_yazma_istegi"));
+});
+
+test("Faz 6: pilot raporu", async () => {
+  const k = join(EV, "program");
+  const r = await calistir(["pilot-raporu", "--eski-saat", "40"], k);
+  assert.equal(r.kod, 0, r.cikti);
+  assert.match(r.cikti, /Çalışma oturumu: 1/);
+  assert.match(r.cikti, /Düzeltilen: 1/);
+  assert.match(r.cikti, /İnsan süresindeki azalma: %\d+/);
+  assert.match(r.cikti, /Yazma planı: \d+ \(tamamlanan 1/);
+  assert.ok(existsSync(join(k, "raporlar", "pilot-raporu.md")));
 });
 
 test("cik bağlantıyı siler", async () => {
