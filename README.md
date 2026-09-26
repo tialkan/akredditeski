@@ -11,15 +11,26 @@ Tanıtım ve hesaplar: https://tezatlas.com/akreddit (kodu tezatatlascom deposun
 | `hukuk/` | Hukuki metin taslakları ve değerlendirme notu |
 | `öğrenilmiş/` | Alan bilgisi tabanı (önceki çalışma) |
 
-## Yerelde deneme
+## Kullanıcı kurulumu
 
-```bash
-claude plugin marketplace add ./
-claude plugin install akreddit@akreddit
+Kullanıcılar için adım adım rehber: https://tezatlas.com/akreddit/kurulum
+
+```
+/plugin marketplace add https://tezatlas.com/akreddit/marketplace.json
+/plugin install akreddit@akreddit
 ```
 
-Sonra bir klasörde Claude Code'u aç ve `/akreddit:baslat` yaz. Aracı elle de kullanabilirsin: `akreddit durum`, `akreddit baglan`.
-Yerel sunucuya karşı denemek için `AKREDDIT_SUNUCU=http://localhost:3000`.
+## Yeni sürüm yayımlama
+
+1. `eklenti/.claude-plugin/plugin.json` içindeki `version` değerini artır.
+2. `node betikler/paketle.mjs` çalıştır. Zip ve `marketplace.json` tezatatlascom deposunun `public/akreddit/` klasörüne yazılır.
+3. tezatatlascom deposunda commit ve push. Kullanıcılar `/plugin marketplace update akreddit` ile alır.
+
+Kaynak kod bu özel depoda kalır. Sitede yalnız paketlenmiş eklenti yayımlanır.
+
+## Yerelde deneme
+
+`claude --plugin-dir ./eklenti` ile tek oturumluk yüklenir. Yerel sunucuya karşı denemek için `AKREDDIT_SUNUCU=http://localhost:3000`.
 
 ## Test
 

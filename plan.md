@@ -265,7 +265,11 @@ Faz 1 ve 2 tezatlas deposunda, faz 3 ve sonrası akreddit deposunda yapılır.
 - **Faz 1 bitti.** tezatlas.com/akreddit tanıtım sayfası, portalda kart ve menü bağlantısı.
 - **Faz 2 bitti.** Ayrı ve korumalı veritabanı, başvuru, TCMB kuru, koşul onayları, ödeme sayfası, TOTP'li yönetim paneli, parola, giriş, hesap, e-posta kuyruğu, yedek betiği. Başvuru `AKREDDIT_BASVURU_ACIK=1` verilmedikçe kapalı. Hukuki metinler sitede "taslak" olarak yayında.
 - **Faz 3 bitti.** Cihaz akışı ve lisans ucu (sunucu). `eklenti/`: `akreddit` aracı (bağlan, durum, kur, kanıt ekle, adım günlüğü), `/akreddit:baslat`, kurallar skill'i, oturum başı lisans kancası. Süresi biten hesap klasör kuramaz, skill oturumu durdurur. Yerel dosyalar korunur.
-- **Sıradaki: Faz 4.** Kanıt okuma ve etiket önerisi, ders-program çıktısı matrisi, kaynaklı rapor taslağı, tarayıcıda salt okuma.
+- **Faz 4 bitti.** Program ve ders çıktıları, kanıt etiketi ve matris önerileri, insan adıyla karar (onay, düzeltme, ret), matris tablosu (md ve csv), rapor denetimi (her [K:kod] gerçek kanıta çıkmalı, kaynaksız sayı uyarı alır). Tarayıcı (Playwright MCP, bellekte profil) yalnız okuma: izin listesi dışındaki araçlar kancayla engellenir. Skill'ler: kanit-inceleme, matris, rapor, sistemden-oku.
+- **Dağıtım:** eklenti tezatlas.com/akreddit/marketplace.json ve SHA-256 sabitli zip ile yayında. Canlı siteden kurulum denendi, çalıştı. Kaynak kod özel GitHub deposunda (tialkan/akreddit).
+- **Kullanıcı rehberi:** tezatlas.com/akreddit/kurulum.
+- **Sıradaki: Faz 5.** Tarayıcıda onaylı yazma: alan tablosu, sayfa sayfa onay, son gönderim insanda.
+- **Faz 6 (pilot) öncesi mutlaka:** gerçek bir hocayla baştan sona kurulum ve bir oturum. Takıldığı her yeri not et, rehberi ve skill metnini ona göre düzelt.
 
 ### Yayına almadan önce senin yapman gerekenler
 

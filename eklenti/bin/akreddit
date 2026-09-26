@@ -6,7 +6,13 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync, appendFileSync } from "node:fs";
 import { homedir, hostname } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+
+const [ana, ara] = process.versions.node.split(".").map(Number);
+if (ana < 22 || (ana === 22 && ara < 13)) {
+  process.stderr.write(`Akreddit Node.js 22.13 ya da üstünü ister. Bu bilgisayarda ${process.versions.node} var. https://nodejs.org adresinden güncel LTS sürümünü kur.\n`);
+  process.exit(1);
+}
+const { DatabaseSync } = await import("node:sqlite");
 
 const SUNUCU = (process.env.AKREDDIT_SUNUCU || "https://tezatlas.com").replace(/\/$/, "");
 const AYAR_KLASORU = join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "akreddit");
@@ -111,8 +117,9 @@ function cik() {
 
 // ---------- Çalışma klasörü ----------
 
-const YEREL_SEMA = `
-  CREATE TABLE IF NOT EXISTS kanitlar (
+const YEREL_GOCLER = [
+  `
+  CREATE TABLE kanitlar (
     id INTEGER PRIMARY KEY,
     ozet TEXT NOT NULL UNIQUE CHECK (length(ozet) = 64),
     ozgun_ad TEXT NOT NULL,
@@ -120,7 +127,7 @@ const YEREL_SEMA = `
     boyut INTEGER NOT NULL CHECK (boyut >= 0),
     eklenme TEXT NOT NULL
   ) STRICT;
-  CREATE TABLE IF NOT EXISTS adimlar (
+  CREATE TABLE adimlar (
     id INTEGER PRIMARY KEY,
     zaman TEXT NOT NULL,
     eylem TEXT NOT NULL,
@@ -129,9 +136,51 @@ const YEREL_SEMA = `
     ekran TEXT,
     onaylayan TEXT
   ) STRICT;
-  CREATE TRIGGER IF NOT EXISTS adim_degismez BEFORE UPDATE ON adimlar BEGIN SELECT RAISE(ABORT, 'Adım kaydı değiştirilemez.'); END;
-  CREATE TRIGGER IF NOT EXISTS adim_silinmez BEFORE DELETE ON adimlar BEGIN SELECT RAISE(ABORT, 'Adım kaydı silinemez.'); END;
-`;
+  CREATE TRIGGER adim_degismez BEFORE UPDATE ON adimlar BEGIN SELECT RAISE(ABORT, 'Adım kaydı değiştirilemez.'); END;
+  CREATE TRIGGER adim_silinmez BEFORE DELETE ON adimlar BEGIN SELECT RAISE(ABORT, 'Adım kaydı silinemez.'); END;
+  `,
+  `
+  CREATE TABLE ciktilar (
+    id INTEGER PRIMARY KEY,
+    tur TEXT NOT NULL CHECK (tur IN ('program', 'ders')),
+    ders TEXT NOT NULL DEFAULT '',
+    kod TEXT NOT NULL CHECK (length(kod) BETWEEN 1 AND 40),
+    metin TEXT NOT NULL CHECK (length(metin) >= 5),
+    kanit_id INTEGER REFERENCES kanitlar(id),
+    eklenme TEXT NOT NULL,
+    UNIQUE (tur, ders, kod),
+    CHECK ((tur = 'program' AND ders = '') OR (tur = 'ders' AND ders <> ''))
+  ) STRICT;
+  CREATE TRIGGER cikti_degismez BEFORE UPDATE ON ciktilar BEGIN SELECT RAISE(ABORT, 'Çıktı metni değiştirilemez. Yeni sürümü yeni kodla ekle.'); END;
+
+  CREATE TABLE oneriler (
+    id INTEGER PRIMARY KEY,
+    tur TEXT NOT NULL CHECK (tur IN ('etiket', 'matris')),
+    hedef TEXT NOT NULL,
+    iliski TEXT CHECK (iliski IN ('puan', 'iliskisiz', 'yetersiz_kanit')),
+    puan INTEGER CHECK (puan BETWEEN 1 AND 5),
+    deger TEXT,
+    gerekce TEXT NOT NULL CHECK (length(gerekce) >= 10),
+    kanit_id INTEGER REFERENCES kanitlar(id),
+    konum TEXT,
+    inceleme TEXT,
+    karar TEXT NOT NULL DEFAULT 'bekliyor' CHECK (karar IN ('bekliyor', 'onaylandi', 'duzeltildi', 'reddedildi')),
+    son_iliski TEXT CHECK (son_iliski IN ('puan', 'iliskisiz', 'yetersiz_kanit')),
+    son_puan INTEGER CHECK (son_puan BETWEEN 1 AND 5),
+    son_deger TEXT,
+    karar_veren TEXT,
+    karar_zamani TEXT,
+    olusturma TEXT NOT NULL,
+    CHECK (tur <> 'matris' OR (iliski IS NOT NULL AND ((iliski = 'puan') = (puan IS NOT NULL)))),
+    CHECK (tur <> 'etiket' OR (deger IS NOT NULL AND kanit_id IS NOT NULL)),
+    CHECK (karar = 'bekliyor' OR (karar_veren IS NOT NULL AND karar_zamani IS NOT NULL))
+  ) STRICT;
+  CREATE TRIGGER oneri_bir_kez_karar BEFORE UPDATE ON oneriler WHEN OLD.karar <> 'bekliyor'
+  BEGIN SELECT RAISE(ABORT, 'Karar verilmiş öneri değiştirilemez. Yeni öneri aç.'); END;
+  CREATE TRIGGER oneri_silinmez BEFORE DELETE ON oneriler BEGIN SELECT RAISE(ABORT, 'Öneri silinemez.'); END;
+  CREATE TRIGGER kanit_silinmez BEFORE DELETE ON kanitlar BEGIN SELECT RAISE(ABORT, 'Kanıt kaydı silinemez.'); END;
+  `,
+];
 
 function klasorBul(baslangic = process.cwd()) {
   let k = resolve(baslangic);
@@ -145,8 +194,18 @@ function klasorBul(baslangic = process.cwd()) {
 
 function yerelVt(klasor) {
   const vt = new DatabaseSync(join(klasor, "kayit", "akreddit.sqlite"));
-  vt.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON;");
-  vt.exec(YEREL_SEMA);
+  vt.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
+  let surum = vt.prepare("PRAGMA user_version").get().user_version;
+  // Faz 3 klasörleri şemayı sürümsüz kurmuştu; tablo varsa ilk göç uygulanmış sayılır.
+  if (surum === 0 && vt.prepare("SELECT 1 FROM sqlite_master WHERE name = 'kanitlar'").get()) surum = 1;
+  for (let i = surum; i < YEREL_GOCLER.length; i++) {
+    vt.exec("BEGIN IMMEDIATE");
+    try {
+      vt.exec(YEREL_GOCLER[i]);
+      vt.exec(`PRAGMA user_version = ${i + 1}`);
+      vt.exec("COMMIT");
+    } catch (e) { vt.exec("ROLLBACK"); throw e; }
+  }
   return vt;
 }
 
@@ -239,6 +298,217 @@ function ozetGoster() {
   for (const a of son) yaz(`  ${a.zaman.slice(0, 16).replace("T", " ")}  ${a.eylem}${a.adres ? `  ${a.adres}` : ""}${a.ayrinti ? `  ${a.ayrinti}` : ""}`);
 }
 
+
+// ---------- Faz 4: çıktılar, öneriler, kararlar, matris, rapor denetimi ----------
+
+function klasorVeVt() {
+  const klasor = klasorBul();
+  if (!klasor) hata("Bir Akreddit çalışma klasöründe değilsin. Önce: akreddit kur <klasor>");
+  return { klasor, vt: yerelVt(klasor) };
+}
+
+function kanitBul(vt, anahtar) {
+  if (!anahtar) return null;
+  // "K:1a2b3c4d" ya da "1a2b3c4d" kısa koddur (en az 6 karakter). 1-5 haneli sayı liste numarasıdır.
+  anahtar = String(anahtar).replace(/^K:/i, "");
+  const k = /^\d{1,5}$/.test(anahtar)
+    ? vt.prepare("SELECT id, ozet, ozgun_ad FROM kanitlar WHERE id = ?").get(Number(anahtar))
+    : /^[0-9a-f]{6,64}$/i.test(anahtar)
+      ? vt.prepare("SELECT id, ozet, ozgun_ad FROM kanitlar WHERE ozet LIKE ?").all(`${anahtar.toLowerCase()}%`)
+      : hata(`Kanıtı listedeki numarasıyla ya da K: koduyla ver: ${anahtar}`);
+  if (Array.isArray(k)) {
+    if (k.length !== 1) hata(k.length ? `"${anahtar}" birden fazla kanıta uyuyor, daha uzun yaz.` : `Kanıt bulunamadı: ${anahtar}`);
+    return k[0];
+  }
+  if (!k) hata(`Kanıt bulunamadı: ${anahtar}`);
+  return k;
+}
+
+function kanitlariListele() {
+  const { vt } = klasorVeVt();
+  const satirlar = vt.prepare("SELECT id, ozet, ozgun_ad, boyut FROM kanitlar ORDER BY id").all();
+  if (!satirlar.length) yaz("Henüz kanıt yok. Eklemek için: akreddit kanit-ekle <dosya>");
+  for (const k of satirlar) yaz(`${String(k.id).padStart(3)}  K:${k.ozet.slice(0, 8)}  ${k.ozgun_ad}  (${Math.ceil(k.boyut / 1024)} KB)`);
+}
+
+function ciktiEkle(s) {
+  const { klasor, vt } = klasorVeVt();
+  const tur = String(s.tur || "");
+  if (!["program", "ders"].includes(tur)) hata("--tur program ya da --tur ders yaz.");
+  if (!s.kod || !s.metin) hata("--kod ve --metin gerekli.");
+  const ders = tur === "ders" ? String(s.ders || "") : "";
+  if (tur === "ders" && !ders) hata("Ders çıktısı için --ders <ders kodu> yaz.");
+  const kanit = s.kanit ? kanitBul(vt, s.kanit) : null;
+  const var_ = vt.prepare("SELECT metin FROM ciktilar WHERE tur = ? AND ders = ? AND kod = ?").get(tur, ders, String(s.kod));
+  if (var_) {
+    if (var_.metin === String(s.metin)) return yaz("Zaten kayıtlı.");
+    hata("Bu kodla farklı bir metin kayıtlı. Çıktı değiştiyse yeni sürümü yeni kodla ekle (örnek: PÇ3-v2).");
+  }
+  vt.prepare("INSERT INTO ciktilar (tur, ders, kod, metin, kanit_id, eklenme) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(tur, ders, String(s.kod), String(s.metin), kanit?.id ?? null, new Date().toISOString());
+  vt.close();
+  adimKaydet(klasor, { eylem: "cikti_eklendi", ayrinti: JSON.stringify({ tur, ders, kod: s.kod }) });
+  yaz(`Eklendi: ${tur === "ders" ? `${ders}.` : ""}${s.kod}`);
+}
+
+function ciktilariListele() {
+  const { vt } = klasorVeVt();
+  for (const c of vt.prepare("SELECT tur, ders, kod, metin FROM ciktilar ORDER BY tur DESC, ders, kod").all()) {
+    yaz(`${c.tur === "program" ? "Program" : `Ders ${c.ders}`}  ${c.kod}: ${c.metin}`);
+  }
+}
+
+function oneriKaydet(klasor, vt, o) {
+  const r = vt.prepare(`INSERT INTO oneriler (tur, hedef, iliski, puan, deger, gerekce, kanit_id, konum, inceleme, olusturma)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(o.tur, o.hedef, o.iliski ?? null, o.puan ?? null, o.deger ?? null, o.gerekce, o.kanitId ?? null, o.konum ?? null, o.inceleme ?? null, new Date().toISOString());
+  const id = Number(r.lastInsertRowid);
+  vt.close();
+  adimKaydet(klasor, { eylem: `oneri_${o.tur}`, ayrinti: JSON.stringify({ id, hedef: o.hedef }) });
+  yaz(`Öneri #${id} kaydedildi. Kullanıcı karar verene kadar "bekliyor".${o.inceleme ? ` İnceleme notu: ${o.inceleme}` : ""}`);
+}
+
+function onerEtiket(s) {
+  const { klasor, vt } = klasorVeVt();
+  if (!s.kanit || !s.baslik || !s.gerekce) hata("--kanit, --baslik ve --gerekce gerekli.");
+  const kanit = kanitBul(vt, s.kanit);
+  oneriKaydet(klasor, vt, { tur: "etiket", hedef: `K:${kanit.ozet.slice(0, 8)}`, deger: String(s.baslik), gerekce: String(s.gerekce), kanitId: kanit.id, konum: s.konum });
+}
+
+function matrisDegeri(s) {
+  const secilen = [s.puan !== undefined, Boolean(s.iliskisiz), Boolean(s.yetersiz)].filter(Boolean).length;
+  if (secilen !== 1) hata("Tam olarak birini ver: --puan 1-5, --iliskisiz ya da --yetersiz.");
+  if (s.iliskisiz) return { iliski: "iliskisiz", puan: null };
+  if (s.yetersiz) return { iliski: "yetersiz_kanit", puan: null };
+  const puan = Number(s.puan);
+  if (!Number.isInteger(puan) || puan < 1 || puan > 5) hata("Puan 1 ile 5 arasında tam sayı olmalı. İlişki yoksa --iliskisiz kullan, 0 yazma.");
+  return { iliski: "puan", puan };
+}
+
+function onerMatris(s) {
+  const { klasor, vt } = klasorVeVt();
+  const [ders, dkod] = String(s["ders-cikti"] || "").split(".");
+  const pkod = String(s["program-cikti"] || "");
+  if (!ders || !dkod || !pkod || !s.gerekce) hata("--ders-cikti DERS.KOD, --program-cikti KOD ve --gerekce gerekli.");
+  if (!vt.prepare("SELECT 1 FROM ciktilar WHERE tur = 'ders' AND ders = ? AND kod = ?").get(ders, dkod)) hata(`Ders çıktısı kayıtlı değil: ${ders}.${dkod}`);
+  if (!vt.prepare("SELECT 1 FROM ciktilar WHERE tur = 'program' AND kod = ?").get(pkod)) hata(`Program çıktısı kayıtlı değil: ${pkod}`);
+  const d = matrisDegeri(s);
+  const kanit = s.kanit ? kanitBul(vt, s.kanit) : null;
+  let inceleme = null;
+  if (d.iliski === "puan" && d.puan >= 4 && !kanit) inceleme = "4 ve 5 puan ölçme planından bir kanıtla desteklenmeli.";
+  if (d.iliski === "puan" && !kanit && !inceleme) inceleme = "Kaynak kanıt belirtilmedi.";
+  oneriKaydet(klasor, vt, { tur: "matris", hedef: `${ders}.${dkod}|${pkod}`, ...d, gerekce: String(s.gerekce), kanitId: kanit?.id, konum: s.konum, inceleme });
+}
+
+function onerileriListele(s) {
+  const { vt } = klasorVeVt();
+  const durum = s.hepsi ? null : String(s.durum || "bekliyor");
+  const satirlar = vt.prepare(`SELECT o.*, k.ozgun_ad FROM oneriler o LEFT JOIN kanitlar k ON k.id = o.kanit_id
+    ${durum ? "WHERE o.karar = ?" : ""} ORDER BY o.id`).all(...(durum ? [durum] : []));
+  if (!satirlar.length) return yaz(durum === "bekliyor" ? "Bekleyen öneri yok." : "Öneri yok.");
+  for (const o of satirlar) {
+    const deger = o.tur === "etiket" ? o.deger : o.iliski === "puan" ? `${o.puan} puan` : o.iliski === "iliskisiz" ? "ilişkisiz" : "kanıt yetersiz";
+    yaz(`#${o.id} [${o.karar}] ${o.tur} ${o.hedef} → ${deger}`);
+    yaz(`     Gerekçe: ${o.gerekce}`);
+    if (o.ozgun_ad) yaz(`     Kaynak: ${o.ozgun_ad}${o.konum ? `, ${o.konum}` : ""}`);
+    if (o.inceleme) yaz(`     İnceleme: ${o.inceleme}`);
+  }
+}
+
+function karar(s) {
+  const { klasor, vt } = klasorVeVt();
+  const [id, eylem] = s._;
+  if (!id || !["onayla", "reddet", "duzelt"].includes(eylem)) hata("Kullanım: akreddit karar <id> onayla|reddet|duzelt --onaylayan \"Ad Soyad\"");
+  if (!s.onaylayan) hata("Kararı kimin verdiğini yaz: --onaylayan \"Ad Soyad\". Kararı yapay zekâ veremez.");
+  const o = vt.prepare("SELECT * FROM oneriler WHERE id = ?").get(Number(id));
+  if (!o) hata(`Öneri bulunamadı: #${id}`);
+  if (o.karar !== "bekliyor") hata(`#${id} için zaten karar verilmiş (${o.karar}). Değişiklik için yeni öneri aç.`);
+  let son = { iliski: o.iliski, puan: o.puan, deger: o.deger };
+  if (eylem === "duzelt") {
+    if (o.tur === "matris") son = { ...matrisDegeri(s), deger: null };
+    else { if (!s.deger) hata("Yeni etiketi yaz: --deger \"başlık\""); son = { iliski: null, puan: null, deger: String(s.deger) }; }
+  }
+  const sonuc = { onayla: "onaylandi", reddet: "reddedildi", duzelt: "duzeltildi" }[eylem];
+  vt.prepare(`UPDATE oneriler SET karar = ?, son_iliski = ?, son_puan = ?, son_deger = ?, karar_veren = ?, karar_zamani = ? WHERE id = ?`)
+    .run(sonuc, eylem === "reddet" ? null : son.iliski, eylem === "reddet" ? null : son.puan, eylem === "reddet" ? null : son.deger, String(s.onaylayan), new Date().toISOString(), o.id);
+  vt.close();
+  adimKaydet(klasor, { eylem: `karar_${sonuc}`, ayrinti: JSON.stringify({ id: o.id, hedef: o.hedef }), onaylayan: String(s.onaylayan) });
+  yaz(`#${o.id}: ${sonuc}.`);
+}
+
+function matrisOlustur(s) {
+  const { klasor, vt } = klasorVeVt();
+  const program = vt.prepare("SELECT kod FROM ciktilar WHERE tur = 'program' ORDER BY kod").all().map((r) => r.kod);
+  const dersler = vt.prepare("SELECT ders, kod FROM ciktilar WHERE tur = 'ders' ORDER BY ders, kod").all();
+  if (!program.length || !dersler.length) hata("Önce program ve ders çıktılarını ekle: akreddit cikti-ekle");
+  // Her hücre için son onaylı ya da düzeltilmiş karar geçerlidir.
+  const kararlar = new Map();
+  for (const o of vt.prepare("SELECT hedef, son_iliski, son_puan FROM oneriler WHERE tur = 'matris' AND karar IN ('onaylandi', 'duzeltildi') ORDER BY karar_zamani").all()) {
+    kararlar.set(o.hedef, o);
+  }
+  const bekleyen = vt.prepare("SELECT COUNT(*) AS n FROM oneriler WHERE tur = 'matris' AND karar = 'bekliyor'").get().n;
+  vt.close();
+  const hucre = (h, csv) => {
+    const k = kararlar.get(h);
+    if (!k) return "";
+    if (k.son_iliski === "puan") return String(k.son_puan);
+    return csv ? k.son_iliski : k.son_iliski === "iliskisiz" ? "·" : "?";
+  };
+  const md = [
+    "# Ders çıktısı × program çıktısı matrisi",
+    "",
+    `Oluşturma: ${new Date().toISOString().slice(0, 16).replace("T", " ")}. Yalnız kullanıcının onayladığı ya da düzelttiği değerler yer alır.`,
+    "",
+    `| Ders çıktısı | ${program.join(" | ")} |`,
+    `|---|${program.map(() => "---").join("|")}|`,
+    ...dersler.map((d) => `| ${d.ders}.${d.kod} | ${program.map((p) => hucre(`${d.ders}.${d.kod}|${p}`, false)).join(" | ")} |`),
+    "",
+    "Gösterim: 1-5 katkı düzeyi. `·` ilişkisiz. `?` kanıt yetersiz. Boş hücre henüz değerlendirilmedi. Bu tablo tasarım uyumunu gösterir, öğrenci başarısını göstermez.",
+    bekleyen ? `\nKarar bekleyen ${bekleyen} matris önerisi var.` : "",
+  ].join("\n");
+  const csv = [["ders_ciktisi", ...program].join(","), ...dersler.map((d) => [`${d.ders}.${d.kod}`, ...program.map((p) => hucre(`${d.ders}.${d.kod}|${p}`, true))].join(","))].join("\n");
+  writeFileSync(join(klasor, "raporlar", "matris.md"), `${md}\n`);
+  writeFileSync(join(klasor, "raporlar", "matris.csv"), `${csv}\n`);
+  adimKaydet(klasor, { eylem: "matris_olusturuldu", ayrinti: JSON.stringify({ hucre: kararlar.size, bekleyen }) });
+  yaz(md);
+  if (s.csv) yaz(`\nCSV: ${join(klasor, "raporlar", "matris.csv")}`);
+}
+
+/** Rapor denetimi: her [K:xxxxxxxx] gerçek bir kanıta çıkmalı, sayı içeren paragraf kaynaksız kalmamalı. */
+function raporDenetle(s) {
+  const { klasor, vt } = klasorVeVt();
+  const dosya = s._[0];
+  if (!dosya || !existsSync(dosya)) hata("Denetlenecek rapor dosyasını yaz: akreddit rapor-denetle raporlar/bolum.md");
+  const kanitlar = vt.prepare("SELECT ozet, ozgun_ad FROM kanitlar").all();
+  vt.close();
+  const metin = readFileSync(dosya, "utf8");
+  const hatalar = [];
+  const uyarilar = [];
+  const kullanilan = new Set();
+  metin.split(/\n{2,}/).forEach((paragraf, i) => {
+    if (/^\s*(#|\||```)/.test(paragraf)) return;
+    const atiflar = [...paragraf.matchAll(/\[K:([0-9a-f]{6,64})(?:[^\]]*)\]/gi)].map((m) => m[1].toLowerCase());
+    for (const a of atiflar) {
+      const eslesen = kanitlar.filter((k) => k.ozet.startsWith(a));
+      if (eslesen.length !== 1) hatalar.push(`Paragraf ${i + 1}: [K:${a}] ${eslesen.length ? "birden fazla kanıta uyuyor" : "hiçbir kanıta karşılık gelmiyor"}.`);
+      else kullanilan.add(eslesen[0].ozgun_ad);
+    }
+    const eksik = /\[EKSİK[^\]]*\]/i.test(paragraf);
+    if (!atiflar.length && !eksik && /\d/.test(paragraf.replace(/\b(19|20)\d{2}(-(19|20)\d{2})?\b/g, ""))) {
+      uyarilar.push(`Paragraf ${i + 1}: sayı içeriyor ama kaynak göstergesi yok: "${paragraf.trim().slice(0, 80)}…"`);
+    }
+  });
+  const eksikler = [...metin.matchAll(/\[EKSİK:?\s*([^\]]*)\]/gi)].map((m) => m[1].trim());
+  yaz(`Rapor: ${dosya}`);
+  yaz(`Kaynak gösterilen kanıt: ${kullanilan.size}`);
+  if (eksikler.length) { yaz(`Eksik diye işaretlenen: ${eksikler.length}`); eksikler.forEach((e) => yaz(`  - ${e}`)); }
+  uyarilar.forEach((u) => yaz(`Uyarı: ${u}`));
+  hatalar.forEach((h) => yaz(`HATA: ${h}`));
+  adimKaydet(klasor, { eylem: "rapor_denetlendi", ayrinti: JSON.stringify({ dosya: basename(dosya), hata: hatalar.length, uyari: uyarilar.length }) });
+  if (hatalar.length) process.exit(CIKIS.hata);
+  yaz(hatalar.length + uyarilar.length ? "" : "Denetim temiz.");
+}
+
 const YARDIM = `Akreddit
 
   baglan [--cihaz-adi ad]   Bu bilgisayarı tezatlas.com hesabına bağlar
@@ -248,10 +518,25 @@ const YARDIM = `Akreddit
   kanit-ekle <dosya…>       Dosyaları kanıt olarak ekler (özgünü korunur)
   adim <eylem> [--adres u] [--ayrinti json] [--ekran yol] [--onaylayan kisi]
                             Adım günlüğüne kayıt ekler
-  ozet                      Klasörün durumunu ve son adımları gösterir`;
+  ozet                      Klasörün durumunu ve son adımları gösterir
+  kanitlar                  Kanıtları kısa kodlarıyla listeler (raporda [K:kod] olarak kullanılır)
+  cikti-ekle --tur program|ders [--ders KOD] --kod KOD --metin "…" [--kanit id]
+  ciktilar                  Kayıtlı program ve ders çıktıları
+  oner-etiket --kanit id --baslik "…" --gerekce "…" [--konum "s. 3"]
+  oner-matris --ders-cikti DERS.KOD --program-cikti KOD (--puan 1-5 | --iliskisiz | --yetersiz)
+              --gerekce "…" [--kanit id] [--konum "…"]
+  oneriler [--durum bekliyor|onaylandi|duzeltildi|reddedildi] [--hepsi]
+  karar <id> onayla|reddet|duzelt --onaylayan "Ad Soyad" [--puan N|--iliskisiz|--yetersiz|--deger "…"]
+  matris [--csv]            Onaylı değerlerden matrisi raporlar/ altına yazar
+  rapor-denetle <dosya.md>  Kaynak göstergelerini kanıtlara karşı denetler`;
 
 const [komut, ...geri] = process.argv.slice(2);
 const s = secenekler(geri);
-const KOMUTLAR = { baglan, durum: durumGoster, cik, kur, "kanit-ekle": kanitEkle, adim, ozet: ozetGoster };
+const KOMUTLAR = {
+  baglan, durum: durumGoster, cik, kur, "kanit-ekle": kanitEkle, adim, ozet: ozetGoster,
+  kanitlar: kanitlariListele, "cikti-ekle": ciktiEkle, ciktilar: ciktilariListele,
+  "oner-etiket": onerEtiket, "oner-matris": onerMatris, oneriler: onerileriListele,
+  karar, matris: matrisOlustur, "rapor-denetle": raporDenetle,
+};
 if (!KOMUTLAR[komut]) { yaz(YARDIM); process.exit(komut ? CIKIS.hata : 0); }
 await KOMUTLAR[komut](s);
