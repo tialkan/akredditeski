@@ -12,6 +12,7 @@ const ARAC = new URL("../bin/akreddit", import.meta.url).pathname;
 
 // Sahte lisans sunucusu: ilk yoklamada bekletir, sonra jeton verir.
 let lisansAktif = true;
+let promosyonlu = false;
 let yoklama = 0;
 const sunucu = createServer((req, res) => {
   const gonder = (kod, veri) => { res.writeHead(kod, { "Content-Type": "application/json" }); res.end(JSON.stringify(veri)); };
@@ -19,6 +20,7 @@ const sunucu = createServer((req, res) => {
   if (req.url === "/api/akreddit/cihaz/jeton") return ++yoklama < 2 ? gonder(202, { durum: "bekliyor" }) : gonder(200, { durum: "tamam", jeton: "jeton-123" });
   if (req.url === "/api/akreddit/lisans") {
     if (req.headers.authorization !== "Bearer jeton-123") return gonder(401, { error: "geçersiz" });
+    if (promosyonlu) return gonder(200, { eposta: "hoca@ornek.edu.tr", aktif: true, kalanGun: null, promosyon: { kod: "KULULARTEKNOLOJI", sponsor: "Kulular Teknoloji" } });
     return gonder(200, { eposta: "hoca@ornek.edu.tr", aktif: lisansAktif, kalanGun: lisansAktif ? 30 : 0 });
   }
   gonder(404, {});
@@ -210,6 +212,14 @@ test("Faz 6: pilot raporu", async () => {
   assert.match(r.cikti, /İnsan süresindeki azalma: %\d+/);
   assert.match(r.cikti, /Yazma planı: \d+ \(tamamlanan 1/);
   assert.ok(existsSync(join(k, "raporlar", "pilot-raporu.md")));
+});
+
+test("promosyonlu hesap ücretsiz görünür", async () => {
+  promosyonlu = true;
+  const r = await calistir(["durum"]);
+  promosyonlu = false;
+  assert.equal(r.kod, 0);
+  assert.match(r.cikti, /Kulular Teknoloji desteğiyle ücretsiz/);
 });
 
 test("cik bağlantıyı siler", async () => {

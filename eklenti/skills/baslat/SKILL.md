@@ -14,9 +14,9 @@ Karşındaki kişi kalite komisyonunda çalışan bir öğretim elemanı. Teknik
 
 `akreddit durum` çalıştır.
 
-- **Açık:** "Erişimin açık, X gün kaldı." de, devam et.
+- **Açık:** "Erişimin açık." de (promosyonluysa "Kulular Teknoloji desteğiyle ücretsiz"), devam et.
 - **Bağlı değil:** `akreddit baglan` çalıştır. Çıkan adresi ve 8 harfli kodu göster: "Bu adresi tarayıcında aç, tezatlas.com hesabınla giriş yap ve ekrandaki kodun bununla aynı olduğunu görüp **Evet, bağla**'ya bas." Komut onayı kendisi bekler.
-- **Süre dolmuş:** "Erişim süren dolmuş. Dosyaların bilgisayarında duruyor. Uzatmak için tezatlas.com/akreddit." de. **Başka hiçbir işlem yapma.**
+- **Süre dolmuş:** "Erişimin kapalı. Dosyaların bilgisayarında duruyor. tezatlas.com/akreddit/kayit adresinden KULULARTEKNOLOJI koduyla ücretsiz hesap açabilirsin." de. **Başka hiçbir işlem yapma.**
 - **Bağlantı hatası:** internet bağlantısını kontrol etmesini iste.
 
 ## 2. Çalışma klasörü

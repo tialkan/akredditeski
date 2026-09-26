@@ -1,6 +1,6 @@
 # Akreddit kişisel verilerin işlenmesine ilişkin aydınlatma metni
 
-Sürüm 0.1 · [yayım tarihi]
+Sürüm 0.2 · Taslak, hukuki incelemede
 
 6698 sayılı Kişisel Verilerin Korunması Kanunu'nun 10. maddesi uyarınca hazırlanmıştır.
 
@@ -12,7 +12,8 @@ Tarık İsmet ALKAN. İletişim: web3alkan@gmail.com.
 
 - Kimlik ve iletişim: ad soyad, e-posta, telefon (WhatsApp ile yazarsanız).
 - Mesleki: kurum, birim, program düzeyi.
-- Ödeme: başvuru kodu, tutar, ödeme tarihi, banka açıklaması. Dekont dosyası sistemimize yüklenmez, WhatsApp ya da e-posta yazışmasında kalır.
+- Promosyon: kullanılan kod ve kullanım zamanı.
+- Ödeme (yalnız ücretli erişimde): başvuru kodu, tutar, ödeme tarihi, banka açıklaması. Dekont dosyası sistemimize yüklenmez, WhatsApp ya da e-posta yazışmasında kalır.
 - Hesap: parolanın geri döndürülemez özeti, oturum ve cihaz bağlantı kayıtları, erişim süresi.
 - Onay kayıtları: kabul ettiğiniz metinlerin sürümü ve kabul zamanı.
 - Güvenlik: sınırlı süreyle tutulan IP adresi özeti.
@@ -30,9 +31,9 @@ Tarık İsmet ALKAN. İletişim: web3alkan@gmail.com.
 
 ## Aktarım
 
-- E-posta gönderim hizmeti: [sağlayıcı adı, ülke]. Yalnız ad ve e-posta adresi.
+- E-posta gönderim hizmeti (etkinleştirildiğinde): Resend, ABD. Yalnız ad ve e-posta adresi.
 - WhatsApp (Meta Platforms, yurt dışı): yalnız WhatsApp ile yazmayı seçerseniz. Dilerseniz dekontu e-postayla gönderebilirsiniz.
-- Barındırma: [sunucu sağlayıcısı, ülke].
+- Barındırma: sitenin çalıştığı sunucu sağlayıcısı.
 - Yetkili kamu kurumları: kanunen zorunlu hallerde.
 
 Yurt dışına aktarımda Kanun'un 9. maddesindeki mekanizmalar uygulanır.

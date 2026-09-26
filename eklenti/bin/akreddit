@@ -102,7 +102,9 @@ async function durumGoster(s) {
   if (s.json) { yaz(JSON.stringify({ kod: sonuc.kod, ...sonuc.lisans })); process.exit(sonuc.kod); }
   const arac = "akreddit";
   const mesajlar = {
-    [CIKIS.tamam]: () => `Akreddit: erişim açık, ${sonuc.lisans.kalanGun} gün kaldı (${sonuc.lisans.eposta}). Araç: ${arac}`,
+    [CIKIS.tamam]: () => sonuc.lisans.promosyon
+      ? `Akreddit: erişim açık, ${sonuc.lisans.promosyon.sponsor} desteğiyle ücretsiz (${sonuc.lisans.eposta}). Araç: ${arac}`
+      : `Akreddit: erişim açık, ${sonuc.lisans.kalanGun} gün kaldı (${sonuc.lisans.eposta}). Araç: ${arac}`,
     [CIKIS.bagli_degil]: () => `Akreddit: bu bilgisayar bir hesaba bağlı değil. Bağlamak için: ${arac} baglan`,
     [CIKIS.suresi_bitti]: () => `Akreddit: erişim süresi dolmuş (${sonuc.lisans.eposta}). Yeni oturum açılamaz. Yerel dosyalar duruyor. Uzatmak için: ${SUNUCU}/akreddit`,
   };

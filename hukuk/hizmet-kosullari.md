@@ -1,6 +1,6 @@
 # Akreddit hizmet koşulları
 
-Sürüm 0.1 · [yayım tarihi]
+Sürüm 0.2 · Taslak, hukuki incelemede
 
 ## 1. Taraflar
 
@@ -14,7 +14,9 @@ Akreddit, Claude Code üzerinde çalışan, akreditasyon ve kalite hazırlığı
 1. Akreddit iş akışına ve güncel paketlerine 30 gün süreyle erişim.
 2. Bu 30 gün boyunca teknik destek.
 
-30 gün, parola oluşturulduğu anda başlar. Parola ödeme onayından sonraki 7 gün içinde oluşturulmazsa süre 7. günün sonunda kendiliğinden başlar. Yeni ödeme süreyi 30 gün uzatır.
+**Promosyon koduyla erişim.** KULULARTEKNOLOJI promosyon koduyla kayıt olan Kullanıcı için hizmet, Kulular Teknoloji desteğiyle kampanya süresince ücretsizdir ve 30 günlük süre sınırı uygulanmaz. Kampanya sona ererse Hazırlayan bunu sitede ve e-postayla en az 15 gün önceden duyurur. Kampanya bittikten sonra bu koddan gelen erişim kapanabilir. Kullanıcının bilgisayarındaki dosyalar her durumda kendisinde kalır. Promosyonla alınan hizmet için hiçbir ödeme istenmez ve hiçbir ödeme koşulu uygulanmaz.
+
+**Ücretli erişim.** 30 gün, parola oluşturulduğu anda başlar. Parola ödeme onayından sonraki 7 gün içinde oluşturulmazsa süre 7. günün sonunda kendiliğinden başlar. Yeni ödeme süreyi 30 gün uzatır.
 
 ## 3. Kullanıcının yükümlülükleri
 
