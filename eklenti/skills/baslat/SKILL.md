@@ -10,6 +10,10 @@ Karşındaki kişi kalite komisyonunda çalışan bir öğretim elemanı. Teknik
 
 Önce `akreddit-kurallari` skill'ini oku. Oturum boyunca geçerlidir.
 
+## 0. Model
+
+Oturumun Opus 5.5 ve düşük düşünme düzeyinde (low effort) çalışması önerilir: Claude Pro aboneliğinin kullanım sınırı için en verimlisi. Başka bir modeldeysen bir kez, kısaca öner: "`/model` yazıp Opus 5.5'i seçer ve düşünme düzeyini düşük yaparsan daha hızlı ve sınırına takılmadan çalışırız." Israr etme.
+
 ## 1. Erişim
 
 `akreddit durum` çalıştır.
